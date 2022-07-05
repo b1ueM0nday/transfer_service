@@ -1,0 +1,24 @@
+//protoc --proto_path=. --proto_path=$HOME/.cache/JetBrains/GoLand2022.1/protoeditor/google/protobuf --go-grpc_out=. --go_out=. proto/transfer.proto
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package transfer_proto;
+
+option go_package="./proto";
+
+message BalanceOperationRequest{
+  optional string account_address = 1;
+  uint64 amount = 2;
+}
+message BalanceRequest{
+  optional string account_address = 1;
+}
+message BalanceReply{
+  uint64 Balance = 1;
+}
+service TransferService {
+  rpc Deposit(BalanceOperationRequest) returns (google.protobuf.Empty){}
+  rpc Withdraw(BalanceOperationRequest)  returns (google.protobuf.Empty){}
+  rpc GetBalance(BalanceRequest) returns (BalanceReply){}
+  rpc Transfer(BalanceOperationRequest) returns (google.protobuf.Empty){}
+ }
