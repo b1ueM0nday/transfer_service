@@ -15,6 +15,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+
 	cc := proto.NewTransferServiceClient(conn)
 	_, err = cc.Deposit(ctx, &proto.BalanceOperationRequest{
 		Amount: 100500,

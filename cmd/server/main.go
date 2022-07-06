@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/b1uem0nday/transfer_service/gg"
-	"github.com/b1uem0nday/transfer_service/transfer"
+	"github.com/b1uem0nday/transfer_service/internal/gg"
+	"github.com/b1uem0nday/transfer_service/internal/transfer"
 	"log"
 )
 
@@ -15,18 +15,6 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	/*err = mtCli.Deposit(big.NewInt(100))
-	if err != nil {
-		log.Panic(err)
-	}
-	err = mtCli.Withdraw(big.NewInt(10))
-	if err != nil {
-		log.Panic(err)
-	}
-	err = mtCli.Transfer("0x8107cf2ca713cfde53e9ab5404bd79f429b5d176", big.NewInt(90))
-	if err != nil {
-		log.Panic(err)
-	}*/
 
 	gs := gg.New(ctx, mtCli)
 	err = gs.Connect("3000")
