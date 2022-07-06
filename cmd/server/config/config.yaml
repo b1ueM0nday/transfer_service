@@ -1,0 +1,4 @@
+port: 3000
+address_path: "./config/ap"
+deploy_address: "http://localhost:22000"
+pk_path: "/home/irina/Downloads/nw/node0/data/nodekey"

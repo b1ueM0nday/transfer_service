@@ -6,6 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.20
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

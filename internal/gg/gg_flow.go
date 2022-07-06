@@ -7,15 +7,15 @@ import (
 	"math/big"
 )
 
-func (gg *GrpcServer) Deposit(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+func (gg *GrpcGateway) Deposit(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, gg.transferClient.Deposit(big.NewInt(int64(request.Amount)))
 }
 
-func (gg *GrpcServer) Withdraw(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+func (gg *GrpcGateway) Withdraw(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, gg.transferClient.Withdraw(big.NewInt(int64(request.Amount)))
 }
 
-func (gg *GrpcServer) GetBalance(ctx context.Context, request *p.BalanceRequest) (*p.BalanceReply, error) {
+func (gg *GrpcGateway) GetBalance(ctx context.Context, request *p.BalanceRequest) (*p.BalanceReply, error) {
 	reply, err := gg.transferClient.GetBalance(request.AccountAddress)
 	if err != nil {
 		return nil, err
@@ -24,6 +24,6 @@ func (gg *GrpcServer) GetBalance(ctx context.Context, request *p.BalanceRequest)
 
 }
 
-func (gg *GrpcServer) Transfer(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+func (gg *GrpcGateway) Transfer(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, gg.transferClient.Transfer(*request.AccountAddress, big.NewInt(int64(request.Amount)))
 }

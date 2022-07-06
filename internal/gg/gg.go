@@ -2,34 +2,30 @@ package gg
 
 import (
 	"context"
-	"github.com/b1uem0nday/transfer_service/internal/transfer"
+	"github.com/b1uem0nday/transfer_service/internal/contracts"
 	p "github.com/b1uem0nday/transfer_service/proto"
 	"google.golang.org/grpc"
+	"log"
 	"net"
 )
 
-const defaultPort = "5000"
-
-type GrpcServer struct {
-	transferClient *transfer.Client
-	//	ctx            context.Context
-	gs       *grpc.Server
-	listener net.Listener
+type GrpcGateway struct {
+	transferClient *contracts.Worker
+	ctx            context.Context
+	gs             *grpc.Server
+	listener       net.Listener
 	p.UnimplementedTransferServiceServer
 }
 
-func New(ctx context.Context, client *transfer.Client) *GrpcServer {
-	return &GrpcServer{
-		transferClient: client,
-		//	ctx:                                ctx,
+func New(ctx context.Context, client *contracts.Worker) *GrpcGateway {
+	return &GrpcGateway{
+		transferClient:                     client,
+		ctx:                                ctx,
 		UnimplementedTransferServiceServer: p.UnimplementedTransferServiceServer{},
 	}
 }
 
-func (gg *GrpcServer) Connect(port string) (err error) {
-	if port == "" {
-		port = defaultPort
-	}
+func (gg *GrpcGateway) Connect(port string) (err error) {
 	gg.listener, err = net.Listen("tcp", ":"+port)
 
 	if err != nil {
@@ -40,6 +36,12 @@ func (gg *GrpcServer) Connect(port string) (err error) {
 
 	gg.gs = grpc.NewServer(opts...)
 	p.RegisterTransferServiceServer(gg.gs, gg)
+	return nil
+}
 
-	return gg.gs.Serve(gg.listener)
+func (gg *GrpcGateway) Run() (err error) {
+	log.Println("listening", gg.listener.Addr())
+	go gg.gs.Serve(gg.listener)
+	<-gg.ctx.Done()
+	return nil
 }

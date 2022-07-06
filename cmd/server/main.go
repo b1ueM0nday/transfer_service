@@ -2,27 +2,59 @@ package main
 
 import (
 	"context"
+	"github.com/b1uem0nday/transfer_service/internal/contracts"
 	"github.com/b1uem0nday/transfer_service/internal/gg"
-	"github.com/b1uem0nday/transfer_service/internal/transfer"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"log"
 )
 
+const configPath = "./config/config.yaml"
+
+type config struct {
+	Port           string `yaml:"port"`
+	AddrPath       string `yaml:"address_path"`
+	DeployAddress  string `yaml:"deploy_address"`
+	PrivateKeyPath string `yaml:"pk_path"`
+}
+
+var defConfig = config{
+	Port:           "3000",
+	AddrPath:       "./config",
+	PrivateKeyPath: "./config",
+	DeployAddress:  "http://localhost:22000",
+}
+
 func main() {
-	var err error
+	cfg := loadConfig()
 	ctx := context.Background()
-	mtCli := new(transfer.Client)
-	err = mtCli.Deploy("http://localhost:22000", "43ce9f8b44fd0975882e0edba5062ee63cbd66db47ce5cf329609226ebd3f707")
+	cWorker := new(contracts.Worker)
+
+	err := cWorker.Prepare(cfg.AddrPath, cfg.DeployAddress, cfg.PrivateKeyPath)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
-	gs := gg.New(ctx, mtCli)
-	err = gs.Connect("3000")
+	gs := gg.New(ctx, cWorker)
+	err = gs.Connect(cfg.Port)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
-	select {
-	case <-ctx.Done():
-		return
+	gs.Run()
+}
+
+func loadConfig() *config {
+	var cfg config
+	b, err := ioutil.ReadFile(configPath)
+	if err != nil || b == nil {
+		log.Println("run using default config")
+		cfg = defConfig
+	} else {
+		err = yaml.Unmarshal(b, &cfg)
+		if err != nil {
+			log.Println("run using default config")
+			cfg = defConfig
+		}
 	}
+	return &cfg
 }
