@@ -15,11 +15,10 @@ import (
 )
 
 type Worker struct {
-	owner           common.Address
-	contractAddress common.Address
-	contract        *balance_op.BalanceOp
-	ethCli          *ethclient.Client
-	defOpts         *bind.TransactOpts
+	owner    common.Address
+	contract *balance_op.BalanceOp
+	ethCli   *ethclient.Client
+	defOpts  *bind.TransactOpts
 }
 
 func New() *Worker {
@@ -58,18 +57,19 @@ func (c *Worker) Prepare(filepath, address, pkpath string) (err error) {
 	c.defOpts.Value = big.NewInt(0)      // in wei
 	c.defOpts.GasLimit = uint64(3000000) // in units
 	c.defOpts.GasPrice = gasPrice
+	var contractAddress common.Address
 	if b, err := ioutil.ReadFile(filepath); b == nil || err != nil {
-		c.contractAddress, err = c.deploy(filepath)
+		contractAddress, err = c.deploy(filepath)
 		if err != nil {
 			return err
 		}
 	} else {
 
-		c.contractAddress = common.BytesToAddress(b)
-		log.Println("using existent contract", c.contractAddress)
+		contractAddress = common.BytesToAddress(b)
+		log.Println("using existent contract", contractAddress)
 	}
 
-	c.contract, err = balance_op.NewBalanceOp(c.contractAddress, c.ethCli)
+	c.contract, err = balance_op.NewBalanceOp(contractAddress, c.ethCli)
 	if err != nil {
 		return err
 	}
