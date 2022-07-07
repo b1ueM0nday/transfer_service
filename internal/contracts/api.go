@@ -9,10 +9,6 @@ import (
 
 func (c *Contract) Deposit(amount *big.Int) (err error) {
 
-	if c.defOpts.Nonce, err = c.getNonce(); err != nil {
-		return err
-	}
-
 	_, err = c.contract.Deposit(c.defOpts, amount)
 
 	return err
@@ -20,20 +16,12 @@ func (c *Contract) Deposit(amount *big.Int) (err error) {
 }
 func (c *Contract) Withdraw(amount *big.Int) (err error) {
 
-	if c.defOpts.Nonce, err = c.getNonce(); err != nil {
-		return err
-	}
-
 	_, err = c.contract.Withdraw(c.defOpts, amount)
 
 	return err
 }
 func (c *Contract) Transfer(receiver string, amount *big.Int) (err error) {
 	receiverAddress := common.HexToAddress(receiver)
-	if c.defOpts.Nonce, err = c.getNonce(); err != nil {
-		return err
-	}
-
 	_, err = c.contract.Transfer(c.defOpts, receiverAddress, amount)
 	return err
 
@@ -51,7 +39,7 @@ func (c *Contract) GetBalance(accountAddress *string) (*big.Int, error) {
 	}
 }
 func (c *Contract) printBalance(adr *common.Address, operation string) (err error) {
-	senderBalance, err := c.contract.Balances(nil, c.owner)
+	senderBalance, err := c.contract.Balances(nil, c.defOpts.From)
 	if err != nil {
 		return err
 	}

@@ -8,10 +8,18 @@ import (
 )
 
 func (gg *GrpcGateway) Deposit(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+	err := gg.transferClient.UpdateNonce()
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, gg.transferClient.Deposit(big.NewInt(int64(request.Amount)))
 }
 
 func (gg *GrpcGateway) Withdraw(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+	err := gg.transferClient.UpdateNonce()
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, gg.transferClient.Withdraw(big.NewInt(int64(request.Amount)))
 }
 
@@ -25,5 +33,9 @@ func (gg *GrpcGateway) GetBalance(ctx context.Context, request *p.BalanceRequest
 }
 
 func (gg *GrpcGateway) Transfer(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
+	err := gg.transferClient.UpdateNonce()
+	if err != nil {
+		return nil, err
+	}
 	return &emptypb.Empty{}, gg.transferClient.Transfer(*request.AccountAddress, big.NewInt(int64(request.Amount)))
 }

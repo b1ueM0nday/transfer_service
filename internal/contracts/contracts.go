@@ -2,8 +2,6 @@ package contracts
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum"
@@ -25,10 +23,10 @@ type (
 		PrivateKeyPath string `yaml:"private_key_path"`
 	}
 	Contract struct {
-		cfg      *Config
-		ctx      context.Context
-		fq       ethereum.FilterQuery
-		owner    common.Address
+		cfg *Config
+		ctx context.Context
+		fq  ethereum.FilterQuery
+		//owner    common.Address
 		contract *balance_op.BalanceOp
 		ethCli   *ethclient.Client
 		defOpts  *bind.TransactOpts
@@ -40,8 +38,8 @@ var DefaultConfig = Config{
 	IP:             "localhost",
 	HttpPort:       "22000",
 	WsPort:         "32000",
-	AddressPath:    "./config",
-	PrivateKeyPath: "./config",
+	AddressPath:    "",
+	PrivateKeyPath: "",
 }
 
 func NewContract(ctx context.Context) *Contract {
@@ -58,13 +56,13 @@ func (c *Contract) Prepare(cfg *Config) (err error) {
 	if err != nil {
 		return err
 	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return errors.New("error casting public key to ECDSA")
-	}
+	/*	publicKey := privateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		if !ok {
+			return errors.New("error casting public key to ECDSA")
+		}
 
-	c.owner = crypto.PubkeyToAddress(*publicKeyECDSA)
+		c.defOpts.From = crypto.PubkeyToAddress(*publicKeyECDSA)*/
 	c.ethCli, err = ethclient.Dial(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
 	if err != nil {
 		return err
@@ -126,7 +124,7 @@ func (c *Contract) deploy(path string) (address common.Address, err error) {
 }
 
 func (c *Contract) getNonce() (*big.Int, error) {
-	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.owner)
+	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.defOpts.From)
 	if err != nil {
 		return nil, err
 	}
@@ -145,5 +143,14 @@ func (c *Contract) setInstance(contractAddress common.Address) (err error) {
 			return err
 		}
 	}
+	return nil
+}
+
+func (c *Contract) UpdateNonce() error {
+	nonce, err := c.getNonce()
+	if err != nil {
+		return err
+	}
+	c.defOpts.Nonce = nonce
 	return nil
 }
