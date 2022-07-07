@@ -9,15 +9,21 @@ import (
 	"net"
 )
 
+type Config struct {
+	Port string `yaml:"port"`
+}
+
+var DefaultConfig = Config{Port: "3000"}
+
 type GrpcGateway struct {
-	transferClient *contracts.Worker
+	transferClient *contracts.Contract
 	ctx            context.Context
 	gs             *grpc.Server
 	listener       net.Listener
 	p.UnimplementedTransferServiceServer
 }
 
-func New(ctx context.Context, client *contracts.Worker) *GrpcGateway {
+func New(ctx context.Context, client *contracts.Contract) *GrpcGateway {
 	return &GrpcGateway{
 		transferClient:                     client,
 		ctx:                                ctx,
@@ -42,6 +48,5 @@ func (gg *GrpcGateway) Connect(port string) (err error) {
 func (gg *GrpcGateway) Run() (err error) {
 	log.Println("listening", gg.listener.Addr())
 	go gg.gs.Serve(gg.listener)
-	<-gg.ctx.Done()
 	return nil
 }

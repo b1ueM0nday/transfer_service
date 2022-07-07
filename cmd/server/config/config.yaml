@@ -1,4 +1,8 @@
-port: 3000
-address_path: "./config/ap"
-deploy_address: "http://localhost:22000"
-pk_path: "/home/irina/Downloads/nw/node0/data/nodekey"
+grpc:
+  port: 3000
+node:
+  ip: "127.0.0.1"
+  http_port: "22000"
+  ws_port: "32000"
+  address_path: "./config/ap"
+  private_key_path: "/home/irina/Downloads/nw/node0/data/nodekey"

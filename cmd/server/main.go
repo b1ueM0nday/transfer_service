@@ -12,49 +12,49 @@ import (
 const configPath = "./config/config.yaml"
 
 type config struct {
-	Port           string `yaml:"port"`
-	AddrPath       string `yaml:"address_path"`
-	DeployAddress  string `yaml:"deploy_address"`
-	PrivateKeyPath string `yaml:"pk_path"`
-}
-
-var defConfig = config{
-	Port:           "3000",
-	AddrPath:       "./config",
-	PrivateKeyPath: "./config",
-	DeployAddress:  "http://localhost:22000",
+	Grpc     gg.Config        `yaml:"grpc"`
+	Contract contracts.Config `yaml:"node"`
 }
 
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	cWorker := new(contracts.Worker)
+	cWorker := contracts.NewContract(ctx)
 
-	err := cWorker.Prepare(cfg.AddrPath, cfg.DeployAddress, cfg.PrivateKeyPath)
+	err := cWorker.Prepare(&cfg.Contract)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	gs := gg.New(ctx, cWorker)
-	err = gs.Connect(cfg.Port)
+	err = gs.Connect(cfg.Grpc.Port)
 	if err != nil {
 		log.Fatal(err)
 	}
 	gs.Run()
+	<-ctx.Done()
 }
 
 func loadConfig() *config {
+
 	var cfg config
 	b, err := ioutil.ReadFile(configPath)
 	if err != nil || b == nil {
 		log.Println("run using default config")
-		cfg = defConfig
+		cfg = *defaultConfig()
 	} else {
 		err = yaml.Unmarshal(b, &cfg)
 		if err != nil {
 			log.Println("run using default config")
-			cfg = defConfig
+			cfg = *defaultConfig()
 		}
 	}
 	return &cfg
+}
+
+func defaultConfig() *config {
+	return &config{
+		Grpc:     gg.DefaultConfig,
+		Contract: contracts.DefaultConfig,
+	}
 }

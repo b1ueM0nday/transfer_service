@@ -19,38 +19,50 @@ func main() {
 	ctx := context.Background()
 	conn, err := grpc.Dial("127.0.0.1:"+*port, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	cc := proto.NewTransferServiceClient(conn)
+
+	balance, err := cc.GetBalance(ctx, &proto.BalanceRequest{AccountAddress: nil})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("sender balance", balance)
+	balance, err = cc.GetBalance(ctx, &proto.BalanceRequest{AccountAddress: tReceiver})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("receiver balance", balance)
+
 	_, err = cc.Deposit(ctx, &proto.BalanceOperationRequest{
 		Amount: *dAmount,
 	})
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	_, err = cc.Withdraw(ctx, &proto.BalanceOperationRequest{
 		Amount: *wAmount,
 	})
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	_, err = cc.Transfer(ctx, &proto.BalanceOperationRequest{
 		Amount:         *tAmount,
 		AccountAddress: tReceiver,
 	})
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
-	balance, err := cc.GetBalance(ctx, &proto.BalanceRequest{AccountAddress: nil})
+	balance, err = cc.GetBalance(ctx, &proto.BalanceRequest{AccountAddress: nil})
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	log.Println("sender balance", balance)
 	balance, err = cc.GetBalance(ctx, &proto.BalanceRequest{AccountAddress: tReceiver})
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	log.Println("receiver balance", balance)
 	return
