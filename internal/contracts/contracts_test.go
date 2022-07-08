@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	blockchain *backends.SimulatedBackend
-	tc         = NewContract(context.Background())
+	blockchain   *backends.SimulatedBackend
+	FakeContract = NewContract(context.Background())
 )
 
 func TestPrepare_EmptyConfig(t *testing.T) {
@@ -25,42 +25,45 @@ func TestPrepare_EmptyConfig(t *testing.T) {
 		AddressPath:    "",
 		PrivateKeyPath: "",
 	}
-	err := tc.Prepare(&badConfig)
+	err := FakeContract.Prepare(&badConfig)
 	if err == nil {
 		t.Errorf("bad config didn't trigger an error")
 	}
 }
 
-func TestContract_Deploy(t *testing.T) {
+func Deploy_FakeContract() error {
+	if FakeContract.contract != nil {
+		return nil
+	}
 	var err error
 	key, _ := crypto.GenerateKey()
 	chainID := big.NewInt(1337)
-	tc.defOpts, err = bind.NewKeyedTransactorWithChainID(key, chainID)
+	FakeContract.defOpts, err = bind.NewKeyedTransactorWithChainID(key, chainID)
 	if err != nil {
-		t.Fatalf("Failed to create NewKeyedTransactorWithChainID : %v", err)
+		return err
 	}
 
-	tc.defOpts.GasLimit = uint64(3000000)
+	FakeContract.defOpts.GasLimit = uint64(3000000)
 	alloc := make(core.GenesisAlloc)
-	alloc[tc.defOpts.From] = core.GenesisAccount{Balance: big.NewInt(100000000000000000)}
-	blockchain = backends.NewSimulatedBackend(alloc, tc.defOpts.GasLimit)
+	alloc[FakeContract.defOpts.From] = core.GenesisAccount{Balance: big.NewInt(100000000000000000)}
+	blockchain = backends.NewSimulatedBackend(alloc, FakeContract.defOpts.GasLimit)
 
 	gasPrice, err := blockchain.SuggestGasPrice(context.Background())
 
 	if err != nil {
-		t.Fatalf("Failed to get SuggestGasPrice : %v", err)
+		return err
 	}
-	tc.defOpts.GasPrice = gasPrice
+	FakeContract.defOpts.GasPrice = gasPrice
 	//Deploy contract
-	_, _, tc.contract, err = balance_op.DeployBalanceOp(
-		tc.defOpts,
+	_, _, FakeContract.contract, err = balance_op.DeployBalanceOp(
+		FakeContract.defOpts,
 		blockchain,
 	)
 
 	if err != nil {
-		t.Fatalf("Failed to deploy smart contract: %v", err)
+		return err
 	}
 
 	blockchain.Commit()
-
+	return nil
 }
