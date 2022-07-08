@@ -91,6 +91,7 @@ func TestContract_Transfer(t *testing.T) {
 	}
 
 	receiverKey, _ := crypto.GenerateKey()
+<<<<<<< Updated upstream
 
 	receiverPublicKey := receiverKey.Public()
 	publicKeyECDSA, ok := receiverPublicKey.(*ecdsa.PublicKey)
@@ -99,6 +100,13 @@ func TestContract_Transfer(t *testing.T) {
 	}
 
 	receiver := crypto.PubkeyToAddress(*publicKeyECDSA)
+=======
+	receiverPublicKey := receiverKey.Public()
+	publicKeyECDSA, _ := receiverPublicKey.(*ecdsa.PublicKey)
+	receiver := crypto.PubkeyToAddress(*publicKeyECDSA)
+	strAddress := receiver.String()
+
+>>>>>>> Stashed changes
 	amount := big.NewInt(100500)
 
 	nonce, err := blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
@@ -106,20 +114,33 @@ func TestContract_Transfer(t *testing.T) {
 		t.Fatalf("failed to get nonce")
 	}
 	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 	err = FakeContract.Deposit(amount)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
+<<<<<<< Updated upstream
 	strAddress := receiver.String()
+=======
+
+>>>>>>> Stashed changes
 	balance, err := FakeContract.GetBalance(&strAddress)
 	if err != nil {
 		t.Fatalf("failed to get balance")
 	}
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 	nonce, err = blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
 	if err != nil {
 		t.Fatalf("failed to get nonce")
 	}
+<<<<<<< Updated upstream
 
 	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
 	err = FakeContract.Transfer(strAddress, amount)
@@ -127,6 +148,16 @@ func TestContract_Transfer(t *testing.T) {
 		t.Fatalf("failed to transfer withdraw")
 	}
 	blockchain.Commit()
+=======
+	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
+
+	err = FakeContract.Transfer(strAddress, amount)
+	if err != nil {
+		t.Fatalf("failed to transfer")
+	}
+	blockchain.Commit()
+
+>>>>>>> Stashed changes
 	afterBalance, err := FakeContract.GetBalance(&strAddress)
 	if err != nil {
 		t.Fatalf("failed to get balance")
