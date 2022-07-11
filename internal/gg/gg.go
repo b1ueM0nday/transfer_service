@@ -16,16 +16,16 @@ type Config struct {
 var DefaultConfig = Config{Port: "3000"}
 
 type GrpcGateway struct {
-	transferClient *contracts.Contract
-	ctx            context.Context
-	gs             *grpc.Server
-	listener       net.Listener
+	client   *contracts.Client
+	ctx      context.Context
+	gs       *grpc.Server
+	listener net.Listener
 	p.UnimplementedTransferServiceServer
 }
 
-func New(ctx context.Context, client *contracts.Contract) *GrpcGateway {
+func New(ctx context.Context, client *contracts.Client) *GrpcGateway {
 	return &GrpcGateway{
-		transferClient:                     client,
+		client:                             client,
 		ctx:                                ctx,
 		UnimplementedTransferServiceServer: p.UnimplementedTransferServiceServer{},
 	}

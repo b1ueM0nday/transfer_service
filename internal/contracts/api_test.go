@@ -1,97 +1,106 @@
 package contracts
 
 import (
+	"context"
 	"crypto/ecdsa"
+	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"testing"
 )
 
-func TestContract_Deposit(t *testing.T) {
-	err := Deploy_FakeContract()
+func CreateFakeContract() (*Client, error) {
+	var err error
+	c := NewClient(context.Background())
+	c.owner, _ = crypto.GenerateKey()
+	c.chainId = big.NewInt(1337)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
 	if err != nil {
-		t.Fatalf("Unable to deploy contract")
-	}
-	balance, err := FakeContract.GetBalance(nil)
-	if err != nil {
-		t.Fatalf("failed to get balance")
+		return nil, err
 	}
 
+	txOpts.GasLimit = uint64(3000000)
+	alloc := make(core.GenesisAlloc)
+	alloc[txOpts.From] = core.GenesisAccount{Balance: big.NewInt(100000000000000000)}
+	blockchain = backends.NewSimulatedBackend(alloc, txOpts.GasLimit)
+
+	gasPrice, err := blockchain.SuggestGasPrice(context.Background())
+
+	if err != nil {
+		return nil, err
+	}
+	txOpts.GasPrice = gasPrice
+
+	_, _, c.contract, err = balance_op.DeployBalanceOp(
+		txOpts,
+		blockchain,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	blockchain.Commit()
+	return c, nil
+}
+
+func TestContract_Deposit(t *testing.T) {
+	fakeCli, err := CreateFakeContract()
+
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
 	amount := big.NewInt(100500)
 
-	nonce, err := blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
-	if err != nil {
-		t.Fatalf("failed to get nonce")
-	}
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-	err = FakeContract.Deposit(amount)
+	err = fakeCli.Deposit(amount, options)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
-	afterBalance, err := FakeContract.GetBalance(nil)
+	afterBalance, err := fakeCli.GetBalance(nil)
 	if err != nil {
 		t.Fatalf("failed to get balance")
 	}
-	diff := big.NewInt(0)
-	diff = diff.Sub(afterBalance, balance)
-	if diff.Cmp(amount) != 0 {
-		t.Fatalf("balance not changed")
+	if afterBalance.Cmp(amount) != 0 {
+		t.Fatalf("balance and deposit sum are different")
 	}
 }
 
 func TestContract_Withdraw(t *testing.T) {
-	err := Deploy_FakeContract()
-	if err != nil {
-		t.Fatalf("Unable to deploy contract")
-	}
-	amount := big.NewInt(100500)
+	fakeCli, err := CreateFakeContract()
 
-	nonce, err := blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
-	if err != nil {
-		t.Fatalf("failed to get nonce")
-	}
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-	err = FakeContract.Deposit(amount)
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
+
+	amount := big.NewInt(100500)
+	err = fakeCli.Deposit(amount, options)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
-	balance, err := FakeContract.GetBalance(nil)
-	if err != nil {
-		t.Fatalf("failed to get balance")
-	}
-	nonce, err = blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
-	if err != nil {
-		t.Fatalf("failed to get nonce")
-	}
-
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-	err = FakeContract.Withdraw(amount)
+	chargeAmount := big.NewInt(500)
+	err = fakeCli.Withdraw(chargeAmount, options)
 	if err != nil {
 		t.Fatalf("failed to send withdraw")
 	}
 	blockchain.Commit()
-	afterBalance, err := FakeContract.GetBalance(nil)
+	afterBalance, err := fakeCli.GetBalance(nil)
 	if err != nil {
 		t.Fatalf("failed to get balance")
 	}
 
-	diff := big.NewInt(0)
-	diff = diff.Sub(balance, afterBalance)
-	if diff.Cmp(amount) != 0 {
-		t.Fatalf("balance not changed")
+	if afterBalance.Cmp(big.NewInt(100000)) != 0 {
+		t.Fatalf("balance was not charged correctly")
 	}
 }
 
 func TestContract_Transfer(t *testing.T) {
-	err := Deploy_FakeContract()
-	if err != nil {
-		t.Fatalf("Unable to deploy contract")
-	}
+
+	fakeCli, err := CreateFakeContract()
+
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
 
 	receiverKey, _ := crypto.GenerateKey()
-<<<<<<< Updated upstream
 
 	receiverPublicKey := receiverKey.Public()
 	publicKeyECDSA, ok := receiverPublicKey.(*ecdsa.PublicKey)
@@ -100,72 +109,41 @@ func TestContract_Transfer(t *testing.T) {
 	}
 
 	receiver := crypto.PubkeyToAddress(*publicKeyECDSA)
-=======
-	receiverPublicKey := receiverKey.Public()
-	publicKeyECDSA, _ := receiverPublicKey.(*ecdsa.PublicKey)
-	receiver := crypto.PubkeyToAddress(*publicKeyECDSA)
-	strAddress := receiver.String()
-
->>>>>>> Stashed changes
 	amount := big.NewInt(100500)
 
-	nonce, err := blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
-	if err != nil {
-		t.Fatalf("failed to get nonce")
-	}
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
-	err = FakeContract.Deposit(amount)
+	err = fakeCli.Deposit(amount, options)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
-<<<<<<< Updated upstream
 	strAddress := receiver.String()
-=======
 
->>>>>>> Stashed changes
-	balance, err := FakeContract.GetBalance(&strAddress)
-	if err != nil {
-		t.Fatalf("failed to get balance")
-	}
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
-	nonce, err = blockchain.PendingNonceAt(FakeContract.ctx, FakeContract.defOpts.From)
-	if err != nil {
-		t.Fatalf("failed to get nonce")
-	}
-<<<<<<< Updated upstream
-
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-	err = FakeContract.Transfer(strAddress, amount)
+	err = fakeCli.Transfer(strAddress, amount, options)
 	if err != nil {
 		t.Fatalf("failed to transfer withdraw")
 	}
 	blockchain.Commit()
-=======
-	FakeContract.defOpts.Nonce = big.NewInt(int64(nonce))
-
-	err = FakeContract.Transfer(strAddress, amount)
-	if err != nil {
-		t.Fatalf("failed to transfer")
-	}
-	blockchain.Commit()
-
->>>>>>> Stashed changes
-	afterBalance, err := FakeContract.GetBalance(&strAddress)
+	afterBalance, err := fakeCli.GetBalance(&strAddress)
 	if err != nil {
 		t.Fatalf("failed to get balance")
 	}
 
-	diff := big.NewInt(0)
-	diff = diff.Sub(afterBalance, balance)
-	if diff.Cmp(amount) != 0 {
-		t.Fatalf("balance not changed")
+	if afterBalance.Cmp(amount) != 0 {
+		t.Fatalf("balance and deposit sum are different")
+	}
+}
+
+func TestClient_GetBalance(t *testing.T) {
+	fakeCli, err := CreateFakeContract()
+
+	b, err := fakeCli.GetBalance(nil)
+	if err != nil {
+		t.Fatalf("failed to get balance")
+	}
+	if b == nil {
+		t.Fatalf("balance is not correct")
+	}
+	if b.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("balance is not correct")
 	}
 }

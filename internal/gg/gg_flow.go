@@ -8,23 +8,23 @@ import (
 )
 
 func (gg *GrpcGateway) Deposit(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
-	err := gg.transferClient.UpdateNonce()
+	txOpts, err := gg.client.NewTxOpts()
 	if err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, gg.transferClient.Deposit(big.NewInt(int64(request.Amount)))
+	return &emptypb.Empty{}, gg.client.Deposit(big.NewInt(int64(request.Amount)), txOpts)
 }
 
 func (gg *GrpcGateway) Withdraw(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
-	err := gg.transferClient.UpdateNonce()
+	txOpts, err := gg.client.NewTxOpts()
 	if err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, gg.transferClient.Withdraw(big.NewInt(int64(request.Amount)))
+	return &emptypb.Empty{}, gg.client.Withdraw(big.NewInt(int64(request.Amount)), txOpts)
 }
 
 func (gg *GrpcGateway) GetBalance(ctx context.Context, request *p.BalanceRequest) (*p.BalanceReply, error) {
-	reply, err := gg.transferClient.GetBalance(request.AccountAddress)
+	reply, err := gg.client.GetBalance(request.AccountAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -33,9 +33,9 @@ func (gg *GrpcGateway) GetBalance(ctx context.Context, request *p.BalanceRequest
 }
 
 func (gg *GrpcGateway) Transfer(ctx context.Context, request *p.BalanceOperationRequest) (*emptypb.Empty, error) {
-	err := gg.transferClient.UpdateNonce()
+	txOpts, err := gg.client.NewTxOpts()
 	if err != nil {
 		return nil, err
 	}
-	return &emptypb.Empty{}, gg.transferClient.Transfer(*request.AccountAddress, big.NewInt(int64(request.Amount)))
+	return &emptypb.Empty{}, gg.client.Transfer(*request.AccountAddress, big.NewInt(int64(request.Amount)), txOpts)
 }
