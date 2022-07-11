@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"encoding/json"
 	"fmt"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -80,7 +81,8 @@ func (c *Client) log() {
 			}
 			log.Printf("block hash: %s \t block number: %d\n", txReceipt.BlockHash, txReceipt.BlockNumber)
 			log.Printf("gas used: %d \t cumulitative gas used: %d\n", txReceipt.GasUsed, txReceipt.CumulativeGasUsed)
-
+			m, err := json.Marshal("some data")
+			c.db.InsertLog(vLog.Topics[0].Hex(), m)
 		}
 	}
 }

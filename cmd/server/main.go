@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/b1uem0nday/transfer_service/internal/base"
 	"github.com/b1uem0nday/transfer_service/internal/contracts"
 	"github.com/b1uem0nday/transfer_service/internal/gg"
 	"gopkg.in/yaml.v2"
@@ -19,7 +20,10 @@ type config struct {
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	client := contracts.NewClient(ctx)
+	db := base.NewDatabase(ctx)
+	db.Connect()
+
+	client := contracts.NewClient(db, ctx)
 
 	err := client.Prepare(&cfg.Contract)
 	if err != nil {

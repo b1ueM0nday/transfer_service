@@ -18,7 +18,7 @@ func TestPrepare_EmptyConfig(t *testing.T) {
 		AddressPath:    "",
 		PrivateKeyPath: "",
 	}
-	c := NewClient(context.Background())
+	c := NewClient(nil, context.Background())
 	err := c.Prepare(&badConfig)
 	if err == nil {
 		t.Errorf("bad config didn't trigger an error")

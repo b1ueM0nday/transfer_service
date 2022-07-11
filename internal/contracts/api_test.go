@@ -14,7 +14,7 @@ import (
 
 func CreateFakeContract() (*Client, error) {
 	var err error
-	c := NewClient(context.Background())
+	c := NewClient(nil, context.Background())
 	c.owner, _ = crypto.GenerateKey()
 	c.chainId = big.NewInt(1337)
 	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)

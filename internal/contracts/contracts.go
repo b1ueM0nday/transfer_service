@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/b1uem0nday/transfer_service/internal/base"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,8 +29,8 @@ type (
 		chainId *big.Int
 		cfg     *Config
 		ctx     context.Context
-
-		fq ethereum.FilterQuery
+		db      *base.Database
+		fq      ethereum.FilterQuery
 
 		owner     *ecdsa.PrivateKey
 		ownerAddr common.Address
@@ -55,8 +56,8 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewClient(ctx context.Context) *Client {
-	return &Client{ctx: ctx}
+func NewClient(base *base.Database, ctx context.Context) *Client {
+	return &Client{db: base, ctx: ctx}
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {

@@ -6,3 +6,8 @@ node:
   ws_port: "32000"
   address_path: "./config/ap"
   private_key_path: "/home/irina/Downloads/nw/node0/data/nodekey"
+base:
+  ip: localhost
+  port: 5432
+  dbname: logs
+  user:
