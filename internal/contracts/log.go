@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (c *Contract) log() {
+func (c *Client) log() {
 	logs := make(chan types.Log)
 	sub, err := c.wsClient.SubscribeFilterLogs(c.ctx, c.fq, logs)
 	if err != nil {

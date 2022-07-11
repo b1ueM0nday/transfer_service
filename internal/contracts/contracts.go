@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum"
@@ -12,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
+	"time"
 )
 
 type (
@@ -22,17 +24,28 @@ type (
 		AddressPath    string `yaml:"address_path"`
 		PrivateKeyPath string `yaml:"private_key_path"`
 	}
-	Contract struct {
-		cfg *Config
-		ctx context.Context
-		fq  ethereum.FilterQuery
-		//owner    common.Address
-		contract *balance_op.BalanceOp
+	Client struct {
+		chainId *big.Int
+		cfg     *Config
+		ctx     context.Context
+
+		fq ethereum.FilterQuery
+
+		owner     *ecdsa.PrivateKey
+		ownerAddr common.Address
+		contract  *balance_op.BalanceOp
+
 		ethCli   *ethclient.Client
-		defOpts  *bind.TransactOpts
 		wsClient *ethclient.Client
 	}
+	txOpts struct {
+		gasPrice *big.Int
+		gasLimit uint64
+		value    *big.Int
+	}
 )
+
+const ping = time.Second * 5
 
 var DefaultConfig = Config{
 	IP:             "localhost",
@@ -42,46 +55,35 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewContract(ctx context.Context) *Contract {
-	return &Contract{ctx: ctx}
+func NewClient(ctx context.Context) *Client {
+	return &Client{ctx: ctx}
 }
 
-func (c *Contract) Prepare(cfg *Config) (err error) {
+func (c *Client) Prepare(cfg *Config) (err error) {
 
 	pk, err := ioutil.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {
 		return err
 	}
-	privateKey, err := crypto.HexToECDSA(string(pk))
+	c.owner, err = crypto.HexToECDSA(string(pk))
 	if err != nil {
 		return err
 	}
-	/*	publicKey := privateKey.Public()
-		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-		if !ok {
-			return errors.New("error casting public key to ECDSA")
-		}
-
-		c.defOpts.From = crypto.PubkeyToAddress(*publicKeyECDSA)*/
-	c.ethCli, err = ethclient.Dial(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
+	c.ethCli, err = connect(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
 	if err != nil {
 		return err
 	}
-	chId, err := c.ethCli.ChainID(c.ctx)
+	c.chainId, err = c.ethCli.ChainID(c.ctx)
 	if err != nil {
 		return err
 	}
-	c.defOpts, err = bind.NewKeyedTransactorWithChainID(privateKey, chId)
-	gasPrice, err := c.ethCli.SuggestGasPrice(context.Background())
+	auth, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
 	if err != nil {
 		return err
 	}
-	c.defOpts.Value = big.NewInt(0)      // in wei
-	c.defOpts.GasLimit = uint64(3000000) // in units
-	c.defOpts.GasPrice = gasPrice
 	var contractAddress common.Address
 	if b, err := ioutil.ReadFile(cfg.AddressPath); b == nil || err != nil {
-		contractAddress, err = c.deploy(cfg.AddressPath)
+		contractAddress, err = c.deploy(cfg.AddressPath, auth)
 		if err != nil {
 			return err
 		}
@@ -90,10 +92,15 @@ func (c *Contract) Prepare(cfg *Config) (err error) {
 
 		log.Println("using existent contract", contractAddress)
 	}
-	if err = c.setInstance(contractAddress); err != nil {
+	if err = c.setInstance(contractAddress, auth); err != nil {
 		return err
 	}
-	c.wsClient, err = ethclient.Dial(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort))
+
+	if c.ownerAddr, err = c.contract.Owner(nil); err != nil {
+		return err
+	}
+
+	c.wsClient, err = connect(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort))
 	if err != nil {
 		log.Printf("unable to create connection via web socket on port %s, run without logging\n", c.cfg.WsPort)
 	} else {
@@ -105,14 +112,14 @@ func (c *Contract) Prepare(cfg *Config) (err error) {
 	return nil
 }
 
-func (c *Contract) deploy(path string) (address common.Address, err error) {
+func (c *Client) deploy(path string, opts *bind.TransactOpts) (address common.Address, err error) {
 
 	if nonce, err := c.getNonce(); err != nil {
 		return common.Address{}, err
 	} else {
-		c.defOpts.Nonce = nonce
+		opts.Nonce = nonce
 	}
-	addr, _, _, err := balance_op.DeployBalanceOp(c.defOpts, c.ethCli)
+	addr, _, _, err := balance_op.DeployBalanceOp(opts, c.ethCli)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -123,18 +130,18 @@ func (c *Contract) deploy(path string) (address common.Address, err error) {
 	return addr, nil
 }
 
-func (c *Contract) getNonce() (*big.Int, error) {
-	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.defOpts.From)
+func (c *Client) getNonce() (*big.Int, error) {
+	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.ownerAddr)
 	if err != nil {
 		return nil, err
 	}
 	return big.NewInt(int64(nonce)), err
 }
 
-func (c *Contract) setInstance(contractAddress common.Address) (err error) {
+func (c *Client) setInstance(contractAddress common.Address, opts *bind.TransactOpts) (err error) {
 	if c.contract, err = balance_op.NewBalanceOp(contractAddress, c.ethCli); err != nil || c.contract == nil {
 		log.Printf("contract %s was not deployed, deploy again", contractAddress)
-		contractAddress, err = c.deploy(c.cfg.AddressPath)
+		contractAddress, err = c.deploy(c.cfg.AddressPath, opts)
 		if err != nil {
 			return err
 		}
@@ -146,11 +153,40 @@ func (c *Contract) setInstance(contractAddress common.Address) (err error) {
 	return nil
 }
 
-func (c *Contract) UpdateNonce() error {
-	nonce, err := c.getNonce()
-	if err != nil {
-		return err
+func connect(rawurl string) (c *ethclient.Client, err error) {
+	for {
+		c, err = ethclient.Dial(rawurl)
+		if err == nil && c != nil {
+			return c, err
+		}
+		time.Sleep(ping)
 	}
-	c.defOpts.Nonce = nonce
-	return nil
+}
+
+func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {
+	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	if err != nil {
+		return nil, err
+	}
+	if txOpts.Nonce, err = c.getNonce(); err != nil {
+		return nil, err
+	}
+
+	if len(opts) > 0 {
+		if opts[0].gasPrice == nil {
+			txOpts.GasPrice, err = c.ethCli.SuggestGasPrice(c.ctx)
+			if err != nil {
+				log.Printf("Cannot calculate suggested gas price due the transaction")
+				txOpts.GasPrice = big.NewInt(0)
+			}
+		}
+		txOpts.GasLimit = opts[0].gasLimit
+		txOpts.Value = opts[0].value
+	}
+
+	return txOpts, nil
+}
+
+func (c *Client) NewTxOpts() (*bind.TransactOpts, error) {
+	return c.newTxOpts()
 }

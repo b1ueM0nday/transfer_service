@@ -19,14 +19,14 @@ type config struct {
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	cWorker := contracts.NewContract(ctx)
+	client := contracts.NewClient(ctx)
 
-	err := cWorker.Prepare(&cfg.Contract)
+	err := client.Prepare(&cfg.Contract)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	gs := gg.New(ctx, cWorker)
+	gs := gg.New(ctx, client)
 	err = gs.Connect(cfg.Grpc.Port)
 	if err != nil {
 		log.Fatal(err)
