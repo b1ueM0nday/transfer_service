@@ -17,23 +17,22 @@ const EnvVarPrefix = "TRANSFER_SERVICE_"
 var client proto.TransferServiceClient
 
 func main() {
-
 	app := cli.NewApp()
+
 	app.Name = "TRANSFER_SERVICE"
 	app.Usage = "Test service for simple smart contract"
 	app.Version = BuildNumber
-	servAddress := cli.StringFlag{
-		Name:   "grpc-addr, ga",
-		Usage:  "grpc server address",
-		Value:  "127.0.0.1:3000",
-		EnvVar: EnvVarPrefix + "GRPC ADDRESS",
-	}
+	app.Flags = []cli.Flag{cli.StringFlag{
+		Name:  "grpc-addr, ga",
+		Usage: "grpc server address",
+		Value: "127.0.0.1:3000",
+	}}
+	app.Before = connect
 	app.Commands = []cli.Command{
 		{
 			Name:    "deposit",
 			Aliases: []string{"d"},
 			Usage:   "deposit amount to the owner account",
-			Before:  connect,
 			Action:  deposit,
 			Flags: []cli.Flag{cli.Uint64Flag{
 				Name:   "deposit-amount, da",
@@ -46,34 +45,31 @@ func main() {
 			Name:    "withdraw",
 			Aliases: []string{"w"},
 			Usage:   "withdraw amount from the owner account",
-			Before:  connect,
 			Action:  withdraw,
 			Flags: []cli.Flag{cli.Uint64Flag{
 				Name:   "withdraw-amount, wa",
 				Value:  0,
 				Usage:  "Amount of money to withdraw",
 				EnvVar: EnvVarPrefix + "WITHDRAW AMOUNT",
-			}, servAddress},
+			}},
 		},
 
 		{
 			Name:    "balance",
 			Aliases: []string{"b"},
 			Usage:   "check balance of user's account",
-			Before:  connect,
 			Action:  getBalance,
 			Flags: []cli.Flag{cli.StringFlag{
 				Name:   "account, a",
 				Value:  "",
 				Usage:  "Address of the account",
 				EnvVar: EnvVarPrefix + "ADDRESS",
-			}, servAddress},
+			}},
 		},
 		{
 			Name:    "transfer",
 			Aliases: []string{"t"},
 			Usage:   "transfer amount from the owner account to receiver account",
-			Before:  connect,
 			Action:  transfer,
 			Flags: []cli.Flag{
 				cli.Uint64Flag{
@@ -87,7 +83,7 @@ func main() {
 					Value:  "",
 					Usage:  "Amount of money to withdraw",
 					EnvVar: EnvVarPrefix + "TRANSFER RECEIVER",
-				}, servAddress,
+				},
 			},
 		},
 	}
@@ -98,6 +94,7 @@ func main() {
 }
 
 func connect(c *cli.Context) error {
+
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	conn, err := grpc.DialContext(ctx, c.String("ga"), grpc.WithTransportCredentials(insecure.NewCredentials()))
