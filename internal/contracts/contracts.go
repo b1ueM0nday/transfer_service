@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/b1uem0nday/transfer_service/internal/base"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
@@ -29,9 +29,8 @@ type (
 		chainId *big.Int
 		cfg     *Config
 		ctx     context.Context
-		db      *base.Database
-		fq      ethereum.FilterQuery
 
+		log       *logger
 		owner     *ecdsa.PrivateKey
 		ownerAddr common.Address
 		contract  *balance_op.BalanceOp
@@ -43,6 +42,10 @@ type (
 		gasPrice *big.Int
 		gasLimit uint64
 		value    *big.Int
+	}
+	owner struct {
+		pk      *ecdsa.PrivateKey
+		address common.Address
 	}
 )
 
@@ -56,12 +59,11 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewClient(base *base.Database, ctx context.Context) *Client {
-	return &Client{db: base, ctx: ctx}
+func NewClient(db *base.Database, ctx context.Context) *Client {
+	return &Client{log: NewLogger(db, make(chan *types.Transaction)), ctx: ctx}
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {
-
 	pk, err := ioutil.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {
 		return err
@@ -101,15 +103,8 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 		return err
 	}
 
-	c.wsClient, err = connect(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort))
-	if err != nil {
-		log.Printf("unable to create connection via web socket on port %s, run without logging\n", c.cfg.WsPort)
-	} else {
-		c.fq = ethereum.FilterQuery{
-			Addresses: []common.Address{contractAddress},
-		}
-		go c.log()
-	}
+	go c.log.Run(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort), contractAddress)
+
 	return nil
 }
 
@@ -155,13 +150,9 @@ func (c *Client) setInstance(contractAddress common.Address, opts *bind.Transact
 }
 
 func connect(rawurl string) (c *ethclient.Client, err error) {
-	for {
-		c, err = ethclient.Dial(rawurl)
-		if err == nil && c != nil {
-			return c, err
-		}
-		time.Sleep(ping)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	return ethclient.DialContext(ctx, rawurl)
 }
 
 func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {

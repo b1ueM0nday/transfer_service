@@ -36,6 +36,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.11.0 // indirect
 	github.com/jackc/pgx/v4 v4.16.1 // indirect
+	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

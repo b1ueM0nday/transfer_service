@@ -10,4 +10,3 @@ base:
   ip: localhost
   port: 5432
   dbname: logs
-  user:

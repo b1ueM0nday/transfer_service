@@ -1,63 +1,27 @@
 package contracts
 
 import (
-	"context"
 	"crypto/ecdsa"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"testing"
 )
-
-func CreateFakeContract() (*Client, error) {
-	var err error
-	c := NewClient(nil, context.Background())
-	c.owner, _ = crypto.GenerateKey()
-	c.chainId = big.NewInt(1337)
-	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
-	if err != nil {
-		return nil, err
-	}
-
-	txOpts.GasLimit = uint64(3000000)
-	alloc := make(core.GenesisAlloc)
-	alloc[txOpts.From] = core.GenesisAccount{Balance: big.NewInt(100000000000000000)}
-	blockchain = backends.NewSimulatedBackend(alloc, txOpts.GasLimit)
-
-	gasPrice, err := blockchain.SuggestGasPrice(context.Background())
-
-	if err != nil {
-		return nil, err
-	}
-	txOpts.GasPrice = gasPrice
-
-	_, _, c.contract, err = balance_op.DeployBalanceOp(
-		txOpts,
-		blockchain,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	blockchain.Commit()
-	return c, nil
-}
 
 func TestContract_Deposit(t *testing.T) {
 	fakeCli, err := CreateFakeContract()
 
 	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
 	amount := big.NewInt(100500)
+	tx, err := fakeCli.deposit(amount, options)
 
-	err = fakeCli.Deposit(amount, options)
+	blockchain.Commit()
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
-	blockchain.Commit()
+	if tx == nil {
+		t.Fatalf("deposit returns empty transaction")
+	}
 	afterBalance, err := fakeCli.GetBalance(nil)
 	if err != nil {
 		t.Fatalf("failed to get balance")
@@ -67,19 +31,63 @@ func TestContract_Deposit(t *testing.T) {
 	}
 }
 
+func TestClient_Deposit_NegativeAmount(t *testing.T) {
+	fakeCli, _ := CreateFakeContract()
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
+	amount := big.NewInt(-1000)
+
+	_, err := fakeCli.deposit(amount, options)
+
+	blockchain.Commit()
+	if err == nil {
+		t.Fatalf("sended negative deposit")
+	}
+}
+
+func TestClient_Withdraw_NegativeAmount(t *testing.T) {
+	fakeCli, _ := CreateFakeContract()
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
+	amount := big.NewInt(-1000)
+
+	_, err := fakeCli.withdraw(amount, options)
+
+	blockchain.Commit()
+
+	if err == nil {
+		t.Fatalf("sended negative withdraw")
+	}
+}
+
+func TestClient_Withdraw_InsufficientFunds(t *testing.T) {
+	fakeCli, _ := CreateFakeContract()
+	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
+	amount := big.NewInt(500)
+
+	fakeCli.deposit(amount, options)
+
+	blockchain.Commit()
+
+	_, err := fakeCli.withdraw(amount.Neg(amount), options)
+
+	blockchain.Commit()
+	if err == nil {
+		t.Fatal("error \"InsufficientFunds\" was not triggered on withdraw")
+	}
+}
+
 func TestContract_Withdraw(t *testing.T) {
 	fakeCli, err := CreateFakeContract()
 
 	options, _ := bind.NewKeyedTransactorWithChainID(fakeCli.owner, fakeCli.chainId)
 
 	amount := big.NewInt(100500)
-	err = fakeCli.Deposit(amount, options)
+	_, err = fakeCli.deposit(amount, options)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
 	chargeAmount := big.NewInt(500)
-	err = fakeCli.Withdraw(chargeAmount, options)
+	_, err = fakeCli.withdraw(chargeAmount, options)
 	if err != nil {
 		t.Fatalf("failed to send withdraw")
 	}
@@ -111,14 +119,14 @@ func TestContract_Transfer(t *testing.T) {
 	receiver := crypto.PubkeyToAddress(*publicKeyECDSA)
 	amount := big.NewInt(100500)
 
-	err = fakeCli.Deposit(amount, options)
+	_, err = fakeCli.deposit(amount, options)
 	if err != nil {
 		t.Fatalf("failed to send deposit")
 	}
 	blockchain.Commit()
 	strAddress := receiver.String()
 
-	err = fakeCli.Transfer(strAddress, amount, options)
+	_, err = fakeCli.transfer(strAddress, amount, options)
 	if err != nil {
 		t.Fatalf("failed to transfer withdraw")
 	}
@@ -134,16 +142,16 @@ func TestContract_Transfer(t *testing.T) {
 }
 
 func TestClient_GetBalance(t *testing.T) {
-	fakeCli, err := CreateFakeContract()
+	fakeCli, _ := CreateFakeContract()
 
 	b, err := fakeCli.GetBalance(nil)
 	if err != nil {
-		t.Fatalf("failed to get balance")
+		t.Fatalf("failed to get balance: %v", err)
 	}
 	if b == nil {
-		t.Fatalf("balance is not correct")
+		t.Fatalf("balance is nil")
 	}
 	if b.Cmp(big.NewInt(0)) != 0 {
-		t.Fatalf("balance is not correct")
+		t.Fatalf("balance is not zero on empty account")
 	}
 }

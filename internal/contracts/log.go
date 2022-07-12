@@ -1,75 +1,67 @@
 package contracts
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/b1uem0nday/transfer_service/internal/base"
+	bo "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"log"
-	"strings"
+	"time"
 )
 
-func (c *Client) log() {
+const (
+	opDeposit   = "Deposit"
+	opWithdraw  = "Withdraw"
+	opTransfer  = "Transfer"
+	opUndefined = "Undefined"
+)
+
+type logger struct {
+	logs         chan types.Log
+	Transactions chan *types.Transaction
+	base         *base.Database
+}
+
+func NewLogger(db *base.Database, tx chan *types.Transaction) *logger {
+	return &logger{
+		logs:         make(chan types.Log),
+		Transactions: tx,
+		base:         db,
+	}
+}
+
+func (l *logger) Run(rawurl string, address common.Address) error {
 	logs := make(chan types.Log)
-	sub, err := c.wsClient.SubscribeFilterLogs(c.ctx, c.fq, logs)
+	var op string
+
+	ws, err := connect(rawurl)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	contractAbi, err := abi.JSON(strings.NewReader(balance_op.BalanceOpABI))
+	filter := ethereum.FilterQuery{
+		Addresses: []common.Address{address},
+	}
+	sub, err := ws.SubscribeFilterLogs(context.Background(), filter, logs)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	var e []interface{}
+	defer sub.Unsubscribe()
+
 	for {
 		select {
-		case <-c.ctx.Done():
-			log.Println("contract context was closed")
-			return
+		case <-context.Background().Done():
+			return nil
 		case err := <-sub.Err():
 			log.Fatal(err)
-		case vLog := <-logs:
-			fmt.Println()
-			for i := range vLog.Topics {
-				switch vLog.Topics[i].Hex() {
-				case balance_op.DepositTopicHash:
-
-					e, err = contractAbi.Unpack("Deposit", vLog.Data)
-					if err != nil {
-						log.Println(err)
-						continue
-					}
-					log.Printf("Deposited %d", e[0])
-
-					c.printBalance(nil, "Deposit")
-
-				case balance_op.WithdrawalTopicHash:
-					e, err = contractAbi.Unpack("Withdrawal", vLog.Data)
-					if err != nil {
-						log.Println(err)
-						continue
-					}
-					log.Printf("Withdrawed %d", e[0])
-					c.printBalance(nil, "Withdraw")
-				case balance_op.TransferTopicHash:
-					e, err = contractAbi.Unpack("Transfer", vLog.Data)
-					if err != nil {
-						log.Println(err)
-						continue
-					}
-					log.Printf("Transferred %d to %s", e[1], e[0])
-					if addr, ok := e[0].(common.Address); ok {
-						c.printBalance(&addr, "Transfer")
-					}
-
-				default:
-					log.Println("Unhandled  topic", vLog.Topics[i].Hex())
-
-				}
-
+		case tx := <-l.Transactions:
+			if tx == nil {
+				break
 			}
-			txReceipt, err := c.wsClient.TransactionReceipt(c.ctx, vLog.TxHash)
+			txReceipt, err := bind.WaitMined(context.Background(), ws, tx)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -79,10 +71,36 @@ func (c *Client) log() {
 			} else {
 				log.Printf("transaction execution failed, hash: %s", txReceipt.TxHash)
 			}
+			b, err := json.Marshal(txReceipt)
 			log.Printf("block hash: %s \t block number: %d\n", txReceipt.BlockHash, txReceipt.BlockNumber)
 			log.Printf("gas used: %d \t cumulitative gas used: %d\n", txReceipt.GasUsed, txReceipt.CumulativeGasUsed)
-			m, err := json.Marshal("some data")
-			c.db.InsertLog(vLog.Topics[0].Hex(), m)
+			if err = l.base.InsertReceipt(time.Now(), opDeposit, b); err != nil {
+				log.Print(err)
+			}
+		case vLog := <-logs:
+			now := time.Now()
+			for i := range vLog.Topics {
+				switch vLog.Topics[i].Hex() {
+				case bo.DepositTopicHash:
+					op = opDeposit
+				case bo.WithdrawalTopicHash:
+					op = opWithdraw
+				case bo.TransferTopicHash:
+					op = opTransfer
+				default:
+					op = opUndefined
+					log.Println("Unhandled  topic", vLog.Topics[i].Hex())
+					continue
+				}
+			}
+			byteLog, err := json.Marshal(vLog)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			l.base.InsertLog(now, op, byteLog)
 		}
 	}
+
+	return nil
 }

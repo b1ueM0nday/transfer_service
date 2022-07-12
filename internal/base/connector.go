@@ -28,10 +28,13 @@ func (db *Database) Connect() {
 	}
 }
 
-func (db *Database) InsertLog(mtype string, data json.RawMessage) error {
-	err := db.db.QueryRow(context.Background(), "insert into public.logs (date, message_type, message) values ($1,$2,$3)", time.Now(), mtype, data)
-	if err != nil {
-		return fmt.Errorf("QueryRow failed: %v\n", err)
-	}
-	return nil
+func (db *Database) InsertLog(dtime time.Time, mtype string, data json.RawMessage) error {
+	_, err := db.db.Exec(context.Background(), "insert into public.logs (date, message_type, message) values ($1,$2,$3)",
+		dtime, mtype, data)
+	return err
+}
+func (db *Database) InsertReceipt(dtime time.Time, optype string, data json.RawMessage) error {
+	_, err := db.db.Exec(context.Background(), "insert into public.receipts (date, op_type, receipt) values ($1,$2,$3)",
+		dtime, optype, data)
+	return err
 }
