@@ -13,18 +13,21 @@ import (
 	"time"
 )
 
-const (
-	opDeposit   = "Deposit"
-	opWithdraw  = "Withdraw"
-	opTransfer  = "Transfer"
-	opUndefined = "Undefined"
-)
-
-type logger struct {
-	logs         chan types.Log
-	Transactions chan *types.Transaction
-	base         *base.Database
+var ops = map[string]string{
+	bo.TransferTopicHash:   "Transfer",
+	bo.DepositTopicHash:    "Deposit",
+	bo.WithdrawalTopicHash: "Withdraw",
 }
+
+const opUndefined = "Undefined"
+
+type (
+	logger struct {
+		logs         chan types.Log
+		Transactions chan *types.Transaction
+		base         *base.Database
+	}
+)
 
 func NewLogger(db *base.Database, tx chan *types.Transaction) *logger {
 	return &logger{
@@ -37,7 +40,6 @@ func NewLogger(db *base.Database, tx chan *types.Transaction) *logger {
 func (l *logger) Run(rawurl string, address common.Address) error {
 	logs := make(chan types.Log)
 	var op string
-
 	ws, err := connect(rawurl)
 	if err != nil {
 		return err
@@ -61,34 +63,38 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 			if tx == nil {
 				break
 			}
+
 			txReceipt, err := bind.WaitMined(context.Background(), ws, tx)
 			if err != nil {
 				log.Println(err)
 				continue
 			}
+
 			if txReceipt.Status == types.ReceiptStatusSuccessful {
 				log.Printf("transaction completed succesfully, hash: %s", txReceipt.TxHash)
 			} else {
 				log.Printf("transaction execution failed, hash: %s", txReceipt.TxHash)
 			}
+
 			b, err := json.Marshal(txReceipt)
 			log.Printf("block hash: %s \t block number: %d\n", txReceipt.BlockHash, txReceipt.BlockNumber)
 			log.Printf("gas used: %d \t cumulitative gas used: %d\n", txReceipt.GasUsed, txReceipt.CumulativeGasUsed)
-			if err = l.base.InsertReceipt(time.Now(), opDeposit, b); err != nil {
-				log.Print(err)
+
+			if _, ok := ops[txReceipt.Logs[0].Topics[0].Hex()]; ok {
+				err = l.base.InsertReceipt(time.Now(), ops[txReceipt.Logs[0].Topics[0].Hex()], b)
+			} else {
+				err = l.base.InsertReceipt(time.Now(), opUndefined, b)
+			}
+			if err != nil {
+				log.Println(err)
 			}
 		case vLog := <-logs:
 			now := time.Now()
 			for i := range vLog.Topics {
-				switch vLog.Topics[i].Hex() {
-				case bo.DepositTopicHash:
-					op = opDeposit
-				case bo.WithdrawalTopicHash:
-					op = opWithdraw
-				case bo.TransferTopicHash:
-					op = opTransfer
-				default:
-					op = opUndefined
+				if _, ok := ops[vLog.Topics[i].Hex()]; ok {
+					op = ops[vLog.Topics[i].Hex()]
+				} else {
+					op = "Undefined"
 					log.Println("Unhandled  topic", vLog.Topics[i].Hex())
 					continue
 				}

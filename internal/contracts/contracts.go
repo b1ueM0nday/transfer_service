@@ -49,8 +49,6 @@ type (
 	}
 )
 
-const ping = time.Second * 5
-
 var DefaultConfig = Config{
 	IP:             "localhost",
 	HttpPort:       "22000",
