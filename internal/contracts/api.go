@@ -11,12 +11,6 @@ import (
 )
 
 func (c *Client) deposit(amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
-	/*if txOpts == nil {
-		return nil, fmt.Errorf("txOpts is nil")
-	}
-	if  amount == nil {
-		return nil, fmt.Errorf("amount is nil")
-	}*/
 
 	if amount.Sign() < 0 {
 		return nil, fmt.Errorf("amount can't be negative")
@@ -30,13 +24,6 @@ func (c *Client) Deposit(amount *big.Int, txOpts *bind.TransactOpts) error {
 }
 
 func (c *Client) withdraw(amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
-	/*if txOpts == nil {
-		return nil, fmt.Errorf("txOpts is nil")
-	}
-	if  amount == nil {
-		return nil, fmt.Errorf("amount is nil")
-	}*/
-
 	if amount.Sign() < 0 {
 		return nil, fmt.Errorf("amount can't be negative")
 	}

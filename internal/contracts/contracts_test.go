@@ -5,17 +5,21 @@ import (
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"testing"
 )
 
-var (
-	blockchain *backends.SimulatedBackend
-)
+type TestClient struct {
+	cli          *Client
+	contractAddr common.Address
 
-func CreateFakeContract() (*Client, error) {
+	blockchain *backends.SimulatedBackend
+}
+
+func CreateFakeContract() (*TestClient, error) {
 	var err error
 	c := NewClient(nil, context.Background())
 	c.owner, _ = crypto.GenerateKey()
@@ -28,7 +32,7 @@ func CreateFakeContract() (*Client, error) {
 	txOpts.GasLimit = uint64(3000000)
 	alloc := make(core.GenesisAlloc)
 	alloc[txOpts.From] = core.GenesisAccount{Balance: big.NewInt(100000000000000000)}
-	blockchain = backends.NewSimulatedBackend(alloc, txOpts.GasLimit)
+	blockchain := backends.NewSimulatedBackend(alloc, txOpts.GasLimit)
 
 	gasPrice, err := blockchain.SuggestGasPrice(context.Background())
 
@@ -36,7 +40,8 @@ func CreateFakeContract() (*Client, error) {
 		return nil, err
 	}
 	txOpts.GasPrice = gasPrice
-	_, _, c.contract, err = balance_op.DeployBalanceOp(
+	var addr common.Address
+	addr, _, c.contract, err = balance_op.DeployBalanceOp(
 		txOpts,
 		blockchain,
 	)
@@ -46,10 +51,14 @@ func CreateFakeContract() (*Client, error) {
 	}
 
 	blockchain.Commit()
-	return c, nil
+	return &TestClient{
+		cli:          c,
+		contractAddr: addr,
+		blockchain:   blockchain,
+	}, nil
 }
 func TestPrepare_EmptyConfig(t *testing.T) {
-	badConfig := Config{
+	emptyConfig := Config{
 		IP:             "",
 		HttpPort:       "",
 		WsPort:         "",
@@ -57,14 +66,8 @@ func TestPrepare_EmptyConfig(t *testing.T) {
 		PrivateKeyPath: "",
 	}
 	c := NewClient(nil, context.Background())
-	err := c.Prepare(&badConfig)
+	err := c.Prepare(&emptyConfig)
 	if err == nil {
 		t.Errorf("bad config didn't trigger an error")
-	}
-}
-func TestDeploy(t *testing.T) {
-	c, err := CreateFakeContract()
-	if err != nil || c == nil {
-		t.Fatalf("failed contract deployment")
 	}
 }

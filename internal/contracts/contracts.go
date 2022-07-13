@@ -35,8 +35,7 @@ type (
 		ownerAddr common.Address
 		contract  *balance_op.BalanceOp
 
-		ethCli   *ethclient.Client
-		wsClient *ethclient.Client
+		ethCli *ethclient.Client
 	}
 	txOpts struct {
 		gasPrice *big.Int
@@ -57,17 +56,12 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewClient(db *base.Database, ctx context.Context) *Client {
+func NewClient(db *base.Repository, ctx context.Context) *Client {
 	return &Client{log: NewLogger(db, make(chan *types.Transaction)), ctx: ctx}
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {
-	pk, err := ioutil.ReadFile(cfg.PrivateKeyPath)
-	if err != nil {
-		return err
-	}
-	c.owner, err = crypto.HexToECDSA(string(pk))
-	if err != nil {
+	if c.owner, err = readKeyFromFile(cfg.PrivateKeyPath); err != nil {
 		return err
 	}
 	c.ethCli, err = connect(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
@@ -179,4 +173,13 @@ func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {
 
 func (c *Client) NewTxOpts() (*bind.TransactOpts, error) {
 	return c.newTxOpts()
+}
+
+func readKeyFromFile(path string) (key *ecdsa.PrivateKey, err error) {
+	pk, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.HexToECDSA(string(pk))
+
 }

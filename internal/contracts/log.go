@@ -25,11 +25,11 @@ type (
 	logger struct {
 		logs         chan types.Log
 		Transactions chan *types.Transaction
-		base         *base.Database
+		base         base.Logger
 	}
 )
 
-func NewLogger(db *base.Database, tx chan *types.Transaction) *logger {
+func NewLogger(db *base.Repository, tx chan *types.Transaction) *logger {
 	return &logger{
 		logs:         make(chan types.Log),
 		Transactions: tx,
@@ -63,7 +63,6 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 			if tx == nil {
 				break
 			}
-
 			txReceipt, err := bind.WaitMined(context.Background(), ws, tx)
 			if err != nil {
 				log.Println(err)
@@ -81,9 +80,9 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 			log.Printf("gas used: %d \t cumulitative gas used: %d\n", txReceipt.GasUsed, txReceipt.CumulativeGasUsed)
 
 			if _, ok := ops[txReceipt.Logs[0].Topics[0].Hex()]; ok {
-				err = l.base.InsertReceipt(time.Now(), ops[txReceipt.Logs[0].Topics[0].Hex()], b)
+				err = l.base.InsertData(time.Now(), ops[txReceipt.Logs[0].Topics[0].Hex()], b, false)
 			} else {
-				err = l.base.InsertReceipt(time.Now(), opUndefined, b)
+				err = l.base.InsertData(time.Now(), opUndefined, b, false)
 			}
 			if err != nil {
 				log.Println(err)
@@ -104,9 +103,17 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 				log.Println(err)
 				continue
 			}
-			l.base.InsertLog(now, op, byteLog)
+			l.base.InsertData(now, op, byteLog, true)
 		}
 	}
 
 	return nil
+}
+
+func logHandler(log *types.Log) {
+
+}
+
+func transactionHandler(tx *types.Transaction) {
+
 }

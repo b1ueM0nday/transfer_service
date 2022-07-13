@@ -31,7 +31,7 @@ const EnvVarPrefix = "TRANSFER_SERVICE_"
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	db := base.NewDatabase(ctx)
+	db := base.NewRepository(ctx)
 	err := db.Connect(cfg.Base.Address, cfg.Base.Login, cfg.Base.Password, cfg.Base.Port)
 	if err != nil {
 		log.Fatal(err)
