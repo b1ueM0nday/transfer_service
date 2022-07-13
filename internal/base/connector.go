@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
-	"os"
 	"time"
 )
 
 type Database struct {
-	db  *pgx.Conn
-	ctx context.Context
+	db      *pgx.Conn
+	ctx     context.Context
+	queries map[string]*pgconn.StatementDescription
 }
 
 func NewDatabase(ctx context.Context) *Database {
@@ -19,22 +20,33 @@ func NewDatabase(ctx context.Context) *Database {
 		ctx: ctx,
 	}
 }
-func (db *Database) Connect() {
-	var err error
-	db.db, err = pgx.Connect(context.Background(), "postgres://postgres:postgrespw@localhost:55000/postgres")
+func (db *Database) Connect(address, login, pass string, port uint) (err error) {
+
+	db.db, err = pgx.Connect(context.Background(),
+		fmt.Sprintf("postgres://%s:%s@%s:%d/postgres", login, pass, address, port))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		return err
 	}
+	for i := range queries {
+		db.queries[i], err = db.db.Prepare(context.Background(), i, queries[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
+func (db *Database) Close() {
+	db.Close()
+}
 func (db *Database) InsertLog(dtime time.Time, mtype string, data json.RawMessage) error {
-	_, err := db.db.Exec(context.Background(), "insert into public.logs (date, message_type, message) values ($1,$2,$3)",
+	_, err := db.db.Exec(context.Background(), db.queries[insertLog].SQL,
 		dtime, mtype, data)
 	return err
 }
 func (db *Database) InsertReceipt(dtime time.Time, optype string, data json.RawMessage) error {
-	_, err := db.db.Exec(context.Background(), "insert into public.receipts (date, op_type, receipt) values ($1,$2,$3)",
+	_, err := db.db.Exec(context.Background(), db.queries[insertLog].SQL,
 		dtime, optype, data)
 	return err
 }

@@ -15,6 +15,12 @@ const configPath = "./config/config.yaml"
 type config struct {
 	Grpc     gg.Config        `yaml:"grpc"`
 	Contract contracts.Config `yaml:"node"`
+	Base     struct {
+		Login    string `yaml:"login"`
+		Password string `yaml:"password"`
+		Address  string `yaml:"address"`
+		Port     uint   `yaml:"port"`
+	} `yaml:"base"`
 }
 
 /*
@@ -26,11 +32,14 @@ func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
 	db := base.NewDatabase(ctx)
-	db.Connect()
-
+	err := db.Connect(cfg.Base.Address, cfg.Base.Login, cfg.Base.Password, cfg.Base.Port)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 	client := contracts.NewClient(db, ctx)
 
-	err := client.Prepare(&cfg.Contract)
+	err = client.Prepare(&cfg.Contract)
 	if err != nil {
 		log.Fatal(err)
 	}
