@@ -19,7 +19,7 @@ func (c *Client) deposit(amount *big.Int, txOpts *bind.TransactOpts) (tx *types.
 }
 func (c *Client) Deposit(amount *big.Int, txOpts *bind.TransactOpts) error {
 	tx, err := c.deposit(amount, txOpts)
-	c.log.Transactions <- tx
+	c.log.HandleTransaction(tx)
 	return err
 }
 
@@ -31,12 +31,12 @@ func (c *Client) withdraw(amount *big.Int, txOpts *bind.TransactOpts) (tx *types
 }
 func (c *Client) Withdraw(amount *big.Int, txOpts *bind.TransactOpts) error {
 	tx, err := c.withdraw(amount, txOpts)
-	c.log.Transactions <- tx
+	c.log.HandleTransaction(tx)
 	return err
 }
 func (c *Client) Transfer(receiver string, amount *big.Int, txOpts *bind.TransactOpts) error {
 	tx, err := c.transfer(receiver, amount, txOpts)
-	c.log.Transactions <- tx
+	c.log.HandleTransaction(tx)
 	return err
 }
 func (c *Client) transfer(receiver string, amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {

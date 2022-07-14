@@ -13,20 +13,15 @@ import (
 const configPath = "./config/config.yaml"
 
 type config struct {
-	Grpc     gg.Config        `yaml:"grpc"`
-	Contract contracts.Config `yaml:"node"`
-	Base     struct {
-		Login    string `yaml:"login"`
-		Password string `yaml:"password"`
-		Address  string `yaml:"address"`
-		Port     uint   `yaml:"port"`
-	} `yaml:"base"`
+	Grpc     gg.Config         `yaml:"grpc"`
+	Contract contracts.Config  `yaml:"node"`
+	Base     repository.Config `yaml:"base"`
 }
 
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	db := base.NewRepository(ctx)
+	db := repository.NewRepository(ctx, &cfg.Base)
 	err := db.Connect(cfg.Base.Address, cfg.Base.Login, cfg.Base.Password, cfg.Base.Port)
 	if err != nil {
 		log.Fatal(err)

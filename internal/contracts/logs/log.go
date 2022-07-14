@@ -1,14 +1,15 @@
-package contracts
+package logs
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/b1uem0nday/transfer_service/internal/base"
+	repository "github.com/b1uem0nday/transfer_service/internal/base"
 	bo "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"time"
 )
@@ -22,25 +23,31 @@ var ops = map[string]string{
 const opUndefined = "Undefined"
 
 type (
+	Logger interface {
+		Run(rawurl string, address common.Address) error
+		HandleTransaction(ts *types.Transaction)
+	}
 	logger struct {
 		logs         chan types.Log
 		Transactions chan *types.Transaction
-		base         base.Repo
+		db           repository.Repo
 	}
 )
 
-func NewLogger(db *base.Repository, tx chan *types.Transaction) *logger {
+func NewLogger(db repository.Repo, tx chan *types.Transaction) *logger {
 	return &logger{
 		logs:         make(chan types.Log),
 		Transactions: tx,
-		base:         db,
+		db:           db,
 	}
 }
 
 func (l *logger) Run(rawurl string, address common.Address) error {
 	logs := make(chan types.Log)
 	var op string
-	ws, err := connect(rawurl)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	ws, err := ethclient.DialContext(ctx, rawurl)
 	if err != nil {
 		return err
 	}
@@ -80,9 +87,9 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 			log.Printf("gas used: %d \t cumulitative gas used: %d\n", txReceipt.GasUsed, txReceipt.CumulativeGasUsed)
 
 			if _, ok := ops[txReceipt.Logs[0].Topics[0].Hex()]; ok {
-				err = l.base.InsertData(time.Now(), ops[txReceipt.Logs[0].Topics[0].Hex()], b, false)
+				err = l.db.InsertReceipt(time.Now(), ops[txReceipt.Logs[0].Topics[0].Hex()], b)
 			} else {
-				err = l.base.InsertData(time.Now(), opUndefined, b, false)
+				err = l.db.InsertReceipt(time.Now(), opUndefined, b)
 			}
 			if err != nil {
 				log.Println(err)
@@ -103,9 +110,13 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 				log.Println(err)
 				continue
 			}
-			l.base.InsertData(now, op, byteLog, true)
+			l.db.InsertLog(now, op, byteLog)
 		}
 	}
 
 	return nil
+}
+
+func (l *logger) HandleTransaction(tx *types.Transaction) {
+	l.Transactions <- tx
 }

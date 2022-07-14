@@ -4,8 +4,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/b1uem0nday/transfer_service/internal/base"
+	repository "github.com/b1uem0nday/transfer_service/internal/base"
 	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
+	"github.com/b1uem0nday/transfer_service/internal/contracts/logs"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +31,7 @@ type (
 		cfg     *Config
 		ctx     context.Context
 
-		log       *logger
+		log       logs.Logger
 		owner     *ecdsa.PrivateKey
 		ownerAddr common.Address
 		contract  *balance_op.BalanceOp
@@ -56,8 +57,8 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewClient(db *base.Repository, ctx context.Context) *Client {
-	return &Client{log: NewLogger(db, make(chan *types.Transaction)), ctx: ctx}
+func NewClient(db repository.Repo, ctx context.Context) *Client {
+	return &Client{log: logs.NewLogger(db, make(chan *types.Transaction)), ctx: ctx}
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {
