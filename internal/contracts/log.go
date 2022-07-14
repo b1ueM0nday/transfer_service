@@ -25,7 +25,7 @@ type (
 	logger struct {
 		logs         chan types.Log
 		Transactions chan *types.Transaction
-		base         base.Logger
+		base         base.Repo
 	}
 )
 
@@ -108,12 +108,4 @@ func (l *logger) Run(rawurl string, address common.Address) error {
 	}
 
 	return nil
-}
-
-func logHandler(log *types.Log) {
-
-}
-
-func transactionHandler(tx *types.Transaction) {
-
 }

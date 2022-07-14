@@ -7,6 +7,7 @@ node:
   address_path: "./config/ap"
   private_key_path: "/home/irina/Downloads/nw/node0/data/nodekey"
 base:
-  ip: localhost
+  login: user
+  password: P@ssw0rd
+  address: localhost
   port: 5432
-  dbname: logs

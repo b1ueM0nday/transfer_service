@@ -9,20 +9,28 @@ import (
 	"time"
 )
 
-type Logger interface {
-	InsertData(dtime time.Time, optype string, data json.RawMessage, isLog bool) (err error)
+type Connector interface {
+	Connect(address, login, pass string, port uint) (err error)
 	Close()
+}
+type Database interface {
+	InsertData(dtime time.Time, optype string, data json.RawMessage, isLog bool) (err error)
+}
+type Repo interface {
+	Connector
+	Database
 }
 type Repository struct {
 	db      *pgx.Conn
 	ctx     context.Context
 	queries map[string]*pgconn.StatementDescription
-	Logger
+	Repo
 }
 
 func NewRepository(ctx context.Context) *Repository {
 	return &Repository{
-		ctx: ctx,
+		ctx:     ctx,
+		queries: make(map[string]*pgconn.StatementDescription, len(queries)),
 	}
 }
 func (r *Repository) Connect(address, login, pass string, port uint) (err error) {

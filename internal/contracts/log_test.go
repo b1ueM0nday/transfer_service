@@ -5,12 +5,12 @@ import (
 	"testing"
 )
 
-func TestRun(t *testing.T) {
+func TestRun_EmptyAddress(t *testing.T) {
 	c, _ := CreateFakeContract()
 	l := NewLogger(nil, make(chan *types.Transaction))
 
-	err := l.Run("bad address", c.contractAddr)
+	err := l.Run("", c.contractAddr)
 	if err == nil {
-		t.Fatalf("run with bad ws address")
+		t.Fatalf("run with empty ws address")
 	}
 }

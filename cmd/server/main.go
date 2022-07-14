@@ -23,11 +23,6 @@ type config struct {
 	} `yaml:"base"`
 }
 
-/*
-const BuildNumber = "0.1"
-const EnvVarPrefix = "TRANSFER_SERVICE_"
-*/
-
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
@@ -51,80 +46,6 @@ func main() {
 	}
 	gs.Run()
 	<-ctx.Done()
-	/*
-		app := cli.NewApp()
-		app.Name = "TRANSFER_SERVICE"
-		app.Usage = "Test service for simple smart contract"
-		app.Version = BuildNumber
-		app.Flags = []cli.Flag{cli.StringFlag{
-			Name:  "grpc-addr, ga",
-			Usage: "grpc server address",
-			Value: "127.0.0.1:3000",
-		}}
-		app.Before = connect
-		app.Commands = []cli.Command{
-			{
-				Name:    "deposit",
-				Aliases: []string{"d"},
-				Usage:   "deposit amount to the owner account",
-				Action:  deposit,
-				Flags: []cli.Flag{cli.Uint64Flag{
-					Name:   "deposit-amount, da",
-					Value:  0,
-					Usage:  "Amount of money to deposit",
-					EnvVar: EnvVarPrefix + "DEPOSIT AMOUNT",
-				}},
-			},
-			{
-				Name:    "withdraw",
-				Aliases: []string{"w"},
-				Usage:   "withdraw amount from the owner account",
-				Action:  withdraw,
-				Flags: []cli.Flag{cli.Uint64Flag{
-					Name:   "withdraw-amount, wa",
-					Value:  0,
-					Usage:  "Amount of money to withdraw",
-					EnvVar: EnvVarPrefix + "WITHDRAW AMOUNT",
-				}},
-			},
-
-			{
-				Name:    "balance",
-				Aliases: []string{"b"},
-				Usage:   "check balance of user's account",
-				Action:  getBalance,
-				Flags: []cli.Flag{cli.StringFlag{
-					Name:   "account, a",
-					Value:  "",
-					Usage:  "Address of the account",
-					EnvVar: EnvVarPrefix + "ADDRESS",
-				}},
-			},
-			{
-				Name:    "transfer",
-				Aliases: []string{"t"},
-				Usage:   "transfer amount from the owner account to receiver account",
-				Action:  transfer,
-				Flags: []cli.Flag{
-					cli.Uint64Flag{
-						Name:   "transfer-amount, ta",
-						Value:  0,
-						Usage:  "Amount of money to withdraw",
-						EnvVar: EnvVarPrefix + "TRANSFER AMOUNT",
-					},
-					cli.StringFlag{
-						Name:   "transfer-receiver, tr",
-						Value:  "",
-						Usage:  "Amount of money to withdraw",
-						EnvVar: EnvVarPrefix + "TRANSFER RECEIVER",
-					},
-				},
-			},
-		}
-
-		if err := app.Run(os.Args); err != nil {
-			os.Exit(1)
-		}*/
 }
 
 func loadConfig() *config {
