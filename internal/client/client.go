@@ -1,12 +1,12 @@
-package contracts
+package client
 
 import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	repository "github.com/b1uem0nday/transfer_service/internal/base"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
-	"github.com/b1uem0nday/transfer_service/internal/contracts/logs"
+	balance_op "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
+	"github.com/b1uem0nday/transfer_service/internal/client/logs"
+	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -26,24 +26,31 @@ type (
 		AddressPath    string `yaml:"address_path"`
 		PrivateKeyPath string `yaml:"private_key_path"`
 	}
+
+	Api interface {
+		Deposit(amount *big.Int) error
+		Withdraw(amount *big.Int) error
+		Transfer(receiver string, amount *big.Int) error
+		GetBalance(accountAddress *string) (*big.Int, error)
+	}
 	Client struct {
 		chainId *big.Int
 		cfg     *Config
 		ctx     context.Context
 
-		log       logs.Logger
-		owner     *ecdsa.PrivateKey
-		ownerAddr common.Address
-		contract  *balance_op.BalanceOp
+		log      logs.Logger
+		owner    ownerData
+		contract *balance_op.BalanceOp
 
 		ethCli *ethclient.Client
+		Api
 	}
 	txOpts struct {
 		gasPrice *big.Int
 		gasLimit uint64
 		value    *big.Int
 	}
-	owner struct {
+	ownerData struct {
 		pk      *ecdsa.PrivateKey
 		address common.Address
 	}
@@ -62,7 +69,7 @@ func NewClient(db repository.Repo, ctx context.Context) *Client {
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {
-	if c.owner, err = readKeyFromFile(cfg.PrivateKeyPath); err != nil {
+	if c.owner.pk, err = readKeyFromFile(cfg.PrivateKeyPath); err != nil {
 		return err
 	}
 	c.ethCli, err = connect(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
@@ -73,7 +80,7 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 	if err != nil {
 		return err
 	}
-	auth, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	auth, err := bind.NewKeyedTransactorWithChainID(c.owner.pk, c.chainId)
 	if err != nil {
 		return err
 	}
@@ -85,14 +92,13 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 		}
 	} else {
 		contractAddress = common.BytesToAddress(b)
-
 		log.Println("using existent contract", contractAddress)
 	}
 	if err = c.setInstance(contractAddress, auth); err != nil {
 		return err
 	}
 
-	if c.ownerAddr, err = c.contract.Owner(nil); err != nil {
+	if c.owner.address, err = c.contract.Owner(nil); err != nil {
 		return err
 	}
 
@@ -120,7 +126,7 @@ func (c *Client) deploy(path string, opts *bind.TransactOpts) (address common.Ad
 }
 
 func (c *Client) getNonce() (*big.Int, error) {
-	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.ownerAddr)
+	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.owner.address)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +155,7 @@ func connect(rawurl string) (c *ethclient.Client, err error) {
 }
 
 func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {
-	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner.pk, c.chainId)
 	if err != nil {
 		return nil, err
 	}

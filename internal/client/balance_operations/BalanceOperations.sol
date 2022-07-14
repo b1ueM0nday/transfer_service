@@ -1,20 +1,44 @@
-//SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 contract BalanceOperations{
     address payable public owner;
+    enum WalletType{BASE, REGULAR, PREMIUM, VIP}
+    WalletType wallet_type;
+    WalletType constant default_type = wallet_type.BASE;
 
+    function upgradeType(uint8 levels) public {
+        choice = FreshJuiceSize.LARGE;
+    }
+    function degradeType(uint8 levels) public {
+        choice = FreshJuiceSize.LARGE;
+    }
+    function getChoice() public view returns (FreshJuiceSize) {
+        return choice;
+    }
+    function getDefaultChoice() public pure returns (uint) {
+        return uint(defaultChoice);
+    }
     constructor() {
         owner = payable(msg.sender);
     }
 
     receive() external payable {}
 
-    mapping(address => uint) public balances;
-
+    mapping(address => Wallet) public balances;
+    struct Wallet {
+        uint _balance;
+        string _name;
+        WalletType _wallet_type;
+    }
     event Deposit(uint amount);
     event Withdrawal(uint amount);
     event Transfer(address receiver, uint amount);
+    function registerWallet(address _userAddress, string memory _username, uint _age) public {
+        _user[_userAddress] = User(_username, _age);
+    }
 
+    function getWalletData(address _address) view public returns(User memory) {
+        return _user[_address];
+    }
     function deposit(uint amount) public payable {
         emit Deposit(amount);
         balances[owner] += amount;

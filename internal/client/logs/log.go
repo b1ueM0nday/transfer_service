@@ -3,8 +3,8 @@ package logs
 import (
 	"context"
 	"encoding/json"
-	repository "github.com/b1uem0nday/transfer_service/internal/base"
-	bo "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
+	bo "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
+	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,6 +31,7 @@ type (
 		logs         chan types.Log
 		Transactions chan *types.Transaction
 		db           repository.Repo
+		Logger
 	}
 )
 

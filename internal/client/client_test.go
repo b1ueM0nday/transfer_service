@@ -1,8 +1,8 @@
-package contracts
+package client
 
 import (
 	"context"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
+	balance_op "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,9 +22,9 @@ type TestClient struct {
 func CreateFakeContract() (*TestClient, error) {
 	var err error
 	c := NewClient(nil, context.Background())
-	c.owner, _ = crypto.GenerateKey()
+	c.owner.pk, _ = crypto.GenerateKey()
 	c.chainId = big.NewInt(1337)
-	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner.pk, c.chainId)
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +51,7 @@ func CreateFakeContract() (*TestClient, error) {
 	}
 
 	blockchain.Commit()
+	c.owner.address, _ = c.contract.Owner(nil)
 	return &TestClient{
 		cli:          c,
 		contractAddr: addr,

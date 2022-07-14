@@ -2,7 +2,7 @@ package gg
 
 import (
 	"context"
-	"github.com/b1uem0nday/transfer_service/internal/contracts"
+	"github.com/b1uem0nday/transfer_service/internal/client"
 	p "github.com/b1uem0nday/transfer_service/proto"
 	"google.golang.org/grpc"
 	"log"
@@ -16,14 +16,14 @@ type Config struct {
 var DefaultConfig = Config{Port: "3000"}
 
 type GrpcGateway struct {
-	client   *contracts.Client
+	client   client.Api
 	ctx      context.Context
 	gs       *grpc.Server
 	listener net.Listener
 	p.UnimplementedTransferServiceServer
 }
 
-func New(ctx context.Context, client *contracts.Client) *GrpcGateway {
+func New(ctx context.Context, client *client.Client) *GrpcGateway {
 	return &GrpcGateway{
 		client:                             client,
 		ctx:                                ctx,
