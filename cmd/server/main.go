@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/b1uem0nday/transfer_service/internal/contracts"
+	"github.com/b1uem0nday/transfer_service/internal/client"
 	"github.com/b1uem0nday/transfer_service/internal/gg"
+	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
@@ -12,16 +13,23 @@ import (
 const configPath = "./config/config.yaml"
 
 type config struct {
-	Grpc     gg.Config        `yaml:"grpc"`
-	Contract contracts.Config `yaml:"node"`
+	Grpc     gg.Config         `yaml:"grpc"`
+	Contract client.Config     `yaml:"node"`
+	Base     repository.Config `yaml:"base"`
 }
 
 func main() {
 	cfg := loadConfig()
 	ctx := context.Background()
-	client := contracts.NewClient(ctx)
+	db := repository.NewRepository(ctx, &cfg.Base)
+	err := db.Connect(cfg.Base.Address, cfg.Base.Login, cfg.Base.Password, cfg.Base.Port)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	client := client.NewClient(db, ctx)
 
-	err := client.Prepare(&cfg.Contract)
+	err = client.Prepare(&cfg.Contract)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,6 +63,7 @@ func loadConfig() *config {
 func defaultConfig() *config {
 	return &config{
 		Grpc:     gg.DefaultConfig,
-		Contract: contracts.DefaultConfig,
+		Contract: client.DefaultConfig,
+		Base:     repository.DefaultConfig,
 	}
 }

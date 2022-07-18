@@ -1,13 +1,15 @@
-package contracts
+package client
 
 import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/contracts/balance_operations"
-	"github.com/ethereum/go-ethereum"
+	balance_op "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
+	"github.com/b1uem0nday/transfer_service/internal/client/logs"
+	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
@@ -24,28 +26,35 @@ type (
 		AddressPath    string `yaml:"address_path"`
 		PrivateKeyPath string `yaml:"private_key_path"`
 	}
+
+	Api interface {
+		Deposit(amount *big.Int) error
+		Withdraw(amount *big.Int) error
+		Transfer(receiver string, amount *big.Int) error
+		GetBalance(accountAddress *string) (*big.Int, error)
+	}
 	Client struct {
 		chainId *big.Int
 		cfg     *Config
 		ctx     context.Context
 
-		fq ethereum.FilterQuery
+		log      logs.Logger
+		owner    ownerData
+		contract *balance_op.BalanceOp
 
-		owner     *ecdsa.PrivateKey
-		ownerAddr common.Address
-		contract  *balance_op.BalanceOp
-
-		ethCli   *ethclient.Client
-		wsClient *ethclient.Client
+		ethCli *ethclient.Client
+		Api
 	}
 	txOpts struct {
 		gasPrice *big.Int
 		gasLimit uint64
 		value    *big.Int
 	}
+	ownerData struct {
+		pk      *ecdsa.PrivateKey
+		address common.Address
+	}
 )
-
-const ping = time.Second * 5
 
 var DefaultConfig = Config{
 	IP:             "localhost",
@@ -55,18 +64,12 @@ var DefaultConfig = Config{
 	PrivateKeyPath: "",
 }
 
-func NewClient(ctx context.Context) *Client {
-	return &Client{ctx: ctx}
+func NewClient(db repository.Repo, ctx context.Context) *Client {
+	return &Client{log: logs.NewLogger(db, make(chan *types.Transaction)), ctx: ctx}
 }
 
 func (c *Client) Prepare(cfg *Config) (err error) {
-
-	pk, err := ioutil.ReadFile(cfg.PrivateKeyPath)
-	if err != nil {
-		return err
-	}
-	c.owner, err = crypto.HexToECDSA(string(pk))
-	if err != nil {
+	if c.owner.pk, err = readKeyFromFile(cfg.PrivateKeyPath); err != nil {
 		return err
 	}
 	c.ethCli, err = connect(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
@@ -77,7 +80,7 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 	if err != nil {
 		return err
 	}
-	auth, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	auth, err := bind.NewKeyedTransactorWithChainID(c.owner.pk, c.chainId)
 	if err != nil {
 		return err
 	}
@@ -89,26 +92,18 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 		}
 	} else {
 		contractAddress = common.BytesToAddress(b)
-
 		log.Println("using existent contract", contractAddress)
 	}
 	if err = c.setInstance(contractAddress, auth); err != nil {
 		return err
 	}
 
-	if c.ownerAddr, err = c.contract.Owner(nil); err != nil {
+	if c.owner.address, err = c.contract.Owner(nil); err != nil {
 		return err
 	}
 
-	c.wsClient, err = connect(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort))
-	if err != nil {
-		log.Printf("unable to create connection via web socket on port %s, run without logging\n", c.cfg.WsPort)
-	} else {
-		c.fq = ethereum.FilterQuery{
-			Addresses: []common.Address{contractAddress},
-		}
-		go c.log()
-	}
+	go c.log.Run(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort), contractAddress)
+
 	return nil
 }
 
@@ -131,7 +126,7 @@ func (c *Client) deploy(path string, opts *bind.TransactOpts) (address common.Ad
 }
 
 func (c *Client) getNonce() (*big.Int, error) {
-	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.ownerAddr)
+	nonce, err := c.ethCli.PendingNonceAt(context.Background(), c.owner.address)
 	if err != nil {
 		return nil, err
 	}
@@ -154,17 +149,13 @@ func (c *Client) setInstance(contractAddress common.Address, opts *bind.Transact
 }
 
 func connect(rawurl string) (c *ethclient.Client, err error) {
-	for {
-		c, err = ethclient.Dial(rawurl)
-		if err == nil && c != nil {
-			return c, err
-		}
-		time.Sleep(ping)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	return ethclient.DialContext(ctx, rawurl)
 }
 
 func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {
-	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner, c.chainId)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(c.owner.pk, c.chainId)
 	if err != nil {
 		return nil, err
 	}
@@ -189,4 +180,13 @@ func (c *Client) newTxOpts(opts ...txOpts) (*bind.TransactOpts, error) {
 
 func (c *Client) NewTxOpts() (*bind.TransactOpts, error) {
 	return c.newTxOpts()
+}
+
+func readKeyFromFile(path string) (key *ecdsa.PrivateKey, err error) {
+	pk, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.HexToECDSA(string(pk))
+
 }
