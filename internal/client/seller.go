@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
 )
 
 type (
@@ -12,7 +11,7 @@ type (
 		AddItem(item *MarketItem) error
 		RemoveItemByName(name string) error
 		RemoveItemByCode(code string) error
-		UpdateItem(code, newDesc string, newPrice *big.Int, newCount uint64)
+		UpdateItem(code, newDesc string, newPrice uint64, newCount uint64) error
 	}
 )
 
@@ -24,8 +23,8 @@ func (c *Client) AddItem(item *MarketItem) error {
 
 	hash := getHash([]byte(item.Name), crypto.FromECDSA(c.owner.pk))
 	item.VendorCode = string(hash[:])
-	tx, err := c.contract1.AddItem(opts, item.VendorCode, item.Name, item.Description,
-		item.Price, big.NewInt(int64(item.Count)))
+	tx, err := c.contract.AddItem(opts, item.VendorCode, item.Name, item.Description,
+		item.Price, item.Count)
 	if err != nil {
 		return err
 	}
@@ -40,7 +39,7 @@ func (c *Client) RemoveItemByName(name string) error {
 	}
 	hash := getHash([]byte(name), crypto.FromECDSA(c.owner.pk))
 	vendorCode := string(hash[:])
-	tx, err := c.contract1.RemoveItem(opts, vendorCode)
+	tx, err := c.contract.RemoveItem(opts, vendorCode)
 	if err != nil {
 		return err
 	}
@@ -52,7 +51,7 @@ func (c *Client) RemoveItemByCode(code string) error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.RemoveItem(opts, code)
+	tx, err := c.contract.RemoveItem(opts, code)
 	if err != nil {
 		return err
 	}
@@ -60,12 +59,12 @@ func (c *Client) RemoveItemByCode(code string) error {
 	return nil
 }
 
-func (c *Client) UpdateItem(code, newDesc string, newPrice *big.Int, newCount uint64) error {
+func (c *Client) UpdateItem(code, newDesc string, newPrice, newCount uint64) error {
 	opts, err := c.NewTxOpts()
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.UpdateItem(opts, code, newDesc, newPrice, big.NewInt(int64(newCount)))
+	tx, err := c.contract.UpdateItem(opts, code, newDesc, newPrice, newCount)
 	if err != nil {
 		return err
 	}

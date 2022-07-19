@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	balance_op "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
+	market "github.com/b1uem0nday/transfer_service/contract"
 	"github.com/b1uem0nday/transfer_service/internal/client/logs"
 	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,10 +28,12 @@ type (
 	}
 
 	Api interface {
-		Deposit(amount *big.Int) error
-		Withdraw(amount *big.Int) error
-		Transfer(receiver string, amount *big.Int) error
-		GetBalance(accountAddress *string) (*big.Int, error)
+		Seller
+		Buyer
+		Deposit(amount uint64) error
+		Withdraw(amount uint64) error
+		Transfer(receiver string, amount uint64) error
+		GetBalance(accountAddress *string) (uint64, error)
 	}
 	Client struct {
 		chainId *big.Int
@@ -40,7 +42,7 @@ type (
 
 		log      logs.Logger
 		owner    ownerData
-		contract *balance_op.BalanceOp
+		contract *market.Market
 
 		ethCli *ethclient.Client
 		Api
@@ -72,6 +74,7 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 	if c.owner.pk, err = readKeyFromFile(cfg.PrivateKeyPath); err != nil {
 		return err
 	}
+	c.owner.address = crypto.PubkeyToAddress(c.owner.pk.PublicKey)
 	c.ethCli, err = connect(fmt.Sprintf("http://%s:%s", cfg.IP, cfg.HttpPort)) //json-rpc
 	if err != nil {
 		return err
@@ -98,10 +101,6 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 		return err
 	}
 
-	if c.owner.address, err = c.contract.Owner(nil); err != nil {
-		return err
-	}
-
 	go c.log.Run(fmt.Sprintf("ws://%s:%s", cfg.IP, cfg.WsPort), contractAddress)
 
 	return nil
@@ -109,12 +108,13 @@ func (c *Client) Prepare(cfg *Config) (err error) {
 
 func (c *Client) deploy(path string, opts *bind.TransactOpts) (address common.Address, err error) {
 
-	if nonce, err := c.getNonce(); err != nil {
+	nonce, err := c.getNonce()
+	if err != nil {
 		return common.Address{}, err
 	} else {
 		opts.Nonce = nonce
 	}
-	addr, _, _, err := balance_op.DeployBalanceOp(opts, c.ethCli)
+	addr, _, _, err := market.DeployMarket(opts, c.ethCli)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -134,13 +134,13 @@ func (c *Client) getNonce() (*big.Int, error) {
 }
 
 func (c *Client) setInstance(contractAddress common.Address, opts *bind.TransactOpts) (err error) {
-	if c.contract, err = balance_op.NewBalanceOp(contractAddress, c.ethCli); err != nil || c.contract == nil {
+	if c.contract, err = market.NewMarket(contractAddress, c.ethCli); err != nil || c.contract == nil {
 		log.Printf("contract %s was not deployed, deploy again", contractAddress)
 		contractAddress, err = c.deploy(c.cfg.AddressPath, opts)
 		if err != nil {
 			return err
 		}
-		c.contract, err = balance_op.NewBalanceOp(contractAddress, c.ethCli)
+		c.contract, err = market.NewMarket(contractAddress, c.ethCli)
 		if err != nil {
 			return err
 		}

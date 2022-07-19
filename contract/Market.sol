@@ -12,7 +12,7 @@ contract Market{
 
     receive() external payable {}
 
-    modifier accessLimitid(AccountType _accountType){
+    modifier accessLimited(AccountType _accountType){
         if (accounts[msg.sender].accType >= _accountType) {
             _;
         }
@@ -21,7 +21,7 @@ contract Market{
     address[] accountsArray;
 
     struct Account{
-        uint balance;
+        uint64 balance;
         UserData userData;
         bool isActive;
         AccountType accType;
@@ -40,15 +40,15 @@ contract Market{
         string vendorCode;
         string name;
         string description;
-        uint256 price;
-        uint count;
+        uint64 price;
+        uint64 count;
         bool isActive;
     }
     event RegisterAccount(string name);
     event UpgradeAccount();
-    event Deposit(uint amount);
-    event Withdrawal(uint amount);
-    event Transfer(address receiver, uint amount);
+    event Deposit(uint64 amount);
+    event Withdrawal(uint64 amount);
+    event Transfer(address receiver, uint64 amount);
 
     function registerAccount(string memory _name, string memory _phone, string memory _email, uint64 _birthday, uint64 _regtime) public{
         require(!accounts[msg.sender].isActive, "Account already exists");
@@ -63,24 +63,24 @@ contract Market{
     function upgradeAccount() public payable{
         require(accounts[msg.sender].accType != AccountType.REGULAR, "Account already regular");
         require(accounts[msg.sender].isActive, "Account already exists");
-        require(accounts[msg.sender].balance==1 ether);
+        require(accounts[msg.sender].balance==123456 wei);
         emit UpgradeAccount();
-        owner.transfer(msg.value);
+        owner.transfer(123456);
         accounts[msg.sender].accType = AccountType.REGULAR;
     }
 
-    function changeName (string memory _name) public accessLimitid(AccountType.REGULAR){
+    function changeName (string memory _name) public accessLimited(AccountType.REGULAR){
         require(!accounts[msg.sender].isActive, "Account already exists");
         accounts[msg.sender].userData.name = _name;
     }
 
-    function changePhone (string memory _phone) public accessLimitid(AccountType.REGULAR){
+    function changePhone (string memory _phone) public accessLimited(AccountType.REGULAR){
         require(!accounts[msg.sender].isActive, "Account already exists");
         accounts[msg.sender].userData.phone = _phone;
     }
 
 
-    function changeEmail (string memory _email) public accessLimitid(AccountType.REGULAR){
+    function changeEmail (string memory _email) public accessLimited(AccountType.REGULAR){
         require(!accounts[msg.sender].isActive, "Account already exists");
         accounts[msg.sender].userData.email = _email;
     }
@@ -92,13 +92,13 @@ contract Market{
     }
 
 
-    function deposit(uint amount) public payable {
+    function deposit(uint64 amount) public payable {
         require(accounts[msg.sender].isActive, "Account does not exists");
         emit Deposit(amount);
         accounts[msg.sender].balance += amount;
     }
 
-    function withdraw(uint amount) external{
+    function withdraw(uint64 amount) external{
         require (accounts[msg.sender].accType >= AccountType.REGULAR, "Access denied, upgrade account");
         require(accounts[msg.sender].isActive, "Account does not exists");
         require(accounts[msg.sender].balance >= amount, "Insufficient funds");
@@ -106,7 +106,7 @@ contract Market{
         accounts[msg.sender].balance -= amount;
     }
 
-    function transfer(address receiver, uint amount) public {
+    function transfer(address receiver, uint64 amount) public {
         require(accounts[msg.sender].isActive, "Account does not exists");
         require(accounts[receiver].isActive, "Receiver does not exists");
         require(accounts[msg.sender].balance >= amount, "Insufficient funds");
@@ -115,13 +115,13 @@ contract Market{
         accounts[receiver].balance += amount;
     }
 
-    function addItem(string memory _vendorCode, string memory _name, string memory _description, uint256 _price, uint _count) public accessLimitid(AccountType.REGULAR) {
+    function addItem(string memory _vendorCode, string memory _name, string memory _description, uint64 _price, uint64 _count) public accessLimited(AccountType.REGULAR) {
         require(!accounts[msg.sender].Items[_vendorCode].isActive, "Item already exists!");
         Item  memory i= Item(_vendorCode, _name, _description, _price, _count, true);
         accounts[msg.sender].Items[_vendorCode] = i;
         accounts[msg.sender].itemsArray.push(_vendorCode);
     }
-    function removeItem(string memory _vendorCode) public accessLimitid(AccountType.REGULAR){
+    function removeItem(string memory _vendorCode) public accessLimited(AccountType.REGULAR){
         require(!accounts[msg.sender].Items[_vendorCode].isActive, "Item already removed;");
         require(accounts[msg.sender].isActive);
         accounts[msg.sender].Items[_vendorCode].isActive = false;
@@ -130,18 +130,18 @@ contract Market{
     function getAccountItemsList() public view returns(Item[] memory){
 
         Item[] memory qq;
-        for (uint i = 0; i < accounts[msg.sender].itemsCount; i++){
+        for (uint64 i = 0; i < accounts[msg.sender].itemsCount; i++){
             qq[i] = accounts[msg.sender].Items[accounts[msg.sender].itemsArray[i]];
         }
         return qq;
     }
 
-    function updateItem(string memory _vendorCode, string memory _desc, uint256 _price, uint _count) public{
+    function updateItem(string memory _vendorCode, string memory _desc, uint64 _price, uint64 _count) public{
         accounts[msg.sender].Items[_vendorCode].description = _desc;
         accounts[msg.sender].Items[_vendorCode].price = _price;
         accounts[msg.sender].Items[_vendorCode].count = _count;
     }
-    function buyItem(address payable seller, string memory _vendorCode, uint count) public{
+    function buyItem(address payable seller, string memory _vendorCode, uint64 count) public{
         require (accounts[seller].Items[_vendorCode].price * count <= accounts[msg.sender].balance, "Insufficient funds");
         require (accounts[seller].Items[_vendorCode].count >= count, "Seller's items count is not enough");
         seller.transfer(accounts[seller].Items[_vendorCode].price * count);

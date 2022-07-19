@@ -1,4 +1,4 @@
-//protoc --proto_path=. --proto_path=$HOME/.cache/JetBrains/GoLand2022.1/protoeditor/google/protobuf --go-grpc_out=. --go_out=. proto/transfer.proto
+  //protoc --proto_path=. --proto_path=$HOME/.cache/JetBrains/GoLand2022.1/protoeditor/google/protobuf --go-grpc_out=. --go_out=. proto/transfer.proto
 syntax = "proto3";
 import "google/protobuf/empty.proto";
 
@@ -14,9 +14,83 @@ message BalanceRequest{
   optional string account_address = 1;
 }
 message BalanceReply{
-  uint64 Balance = 1;
+  uint64 balance = 1;
+}
+message AddItemRequest {
+  string name = 1;
+  string desc = 2;
+  uint64 price = 3;
+  uint64 count  = 4;
+}
+message AddItemVendorCodeReply{
+  string code = 1;
+}
+message RemoveItemOneOf{
+  oneof rm{
+    string name = 1;
+    string code = 2;
+  }
+}
+
+message RegisterRequest{
+  string name  = 1;
+  string phone = 2;
+  string email = 3;
+  uint64 birthday = 4;
+}
+
+message UpdateItemRequest{
+    string code = 1;
+    string desc = 2;
+    uint64 price = 3;
+    uint64 count = 4;
+}
+message UpdateAccountRequest{
+  optional string name = 1;
+  optional string phone = 2;
+  optional string email = 3;
+}
+
+message GetAccountInfoRequest{
+  string address = 1;
+}
+message GetAccountInfoReply{
+  string name  = 1;
+  string phone = 2;
+  string email = 3;
+  uint64 birthday = 4;
+  uint64 reg_time = 5;
+}
+message GetSellerItemsListRequest{
+  string address = 1;
+}
+message GetSellerItemsListReply{
+  repeated SellerItem items = 1;
+}
+message SellerItem{
+  string vendor_code = 1;
+  string name = 2;
+  string desc = 3;
+  uint64 price = 4;
+  uint64 count = 5;
+}
+message BuyRequest{
+  string seller = 1;
+  string code = 2;
+  uint64 count = 3;
 }
 service TransferService {
+  rpc AddItem (AddItemRequest) returns(AddItemVendorCodeReply){}
+  rpc RemoveItem(RemoveItemOneOf) returns (google.protobuf.Empty){}
+  rpc UpdateItem(UpdateItemRequest) returns (google.protobuf.Empty){}
+
+  rpc RegisterAccount(RegisterRequest) returns (google.protobuf.Empty){}
+  rpc UpgradeAccount(google.protobuf.Empty) returns (google.protobuf.Empty){}
+  rpc UpdateAccount(UpdateAccountRequest) returns (google.protobuf.Empty){}
+  rpc GetAccountInfo(GetAccountInfoRequest) returns (GetAccountInfoReply){}
+  rpc GetSellerItemsList(GetSellerItemsListRequest) returns (GetSellerItemsListReply){}
+  rpc Buy(BuyRequest) returns (google.protobuf.Empty){}
+
   rpc Deposit(BalanceOperationRequest) returns (google.protobuf.Empty){}
   rpc Withdraw(BalanceOperationRequest)  returns (google.protobuf.Empty){}
   rpc GetBalance(BalanceRequest) returns (BalanceReply){}

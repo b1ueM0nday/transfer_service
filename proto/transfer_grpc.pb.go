@@ -23,6 +23,15 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TransferServiceClient interface {
+	AddItem(ctx context.Context, in *AddItemRequest, opts ...grpc.CallOption) (*AddItemVendorCodeReply, error)
+	RemoveItem(ctx context.Context, in *RemoveItemOneOf, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	RegisterAccount(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpgradeAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetAccountInfo(ctx context.Context, in *GetAccountInfoRequest, opts ...grpc.CallOption) (*GetAccountInfoReply, error)
+	GetSellerItemsList(ctx context.Context, in *GetSellerItemsListRequest, opts ...grpc.CallOption) (*GetSellerItemsListReply, error)
+	Buy(ctx context.Context, in *BuyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Deposit(ctx context.Context, in *BalanceOperationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Withdraw(ctx context.Context, in *BalanceOperationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBalance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceReply, error)
@@ -35,6 +44,87 @@ type transferServiceClient struct {
 
 func NewTransferServiceClient(cc grpc.ClientConnInterface) TransferServiceClient {
 	return &transferServiceClient{cc}
+}
+
+func (c *transferServiceClient) AddItem(ctx context.Context, in *AddItemRequest, opts ...grpc.CallOption) (*AddItemVendorCodeReply, error) {
+	out := new(AddItemVendorCodeReply)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/AddItem", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) RemoveItem(ctx context.Context, in *RemoveItemOneOf, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/RemoveItem", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) UpdateItem(ctx context.Context, in *UpdateItemRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/UpdateItem", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) RegisterAccount(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/RegisterAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) UpgradeAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/UpgradeAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/UpdateAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) GetAccountInfo(ctx context.Context, in *GetAccountInfoRequest, opts ...grpc.CallOption) (*GetAccountInfoReply, error) {
+	out := new(GetAccountInfoReply)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/GetAccountInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) GetSellerItemsList(ctx context.Context, in *GetSellerItemsListRequest, opts ...grpc.CallOption) (*GetSellerItemsListReply, error) {
+	out := new(GetSellerItemsListReply)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/GetSellerItemsList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *transferServiceClient) Buy(ctx context.Context, in *BuyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer_proto.TransferService/Buy", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *transferServiceClient) Deposit(ctx context.Context, in *BalanceOperationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -77,6 +167,15 @@ func (c *transferServiceClient) Transfer(ctx context.Context, in *BalanceOperati
 // All implementations must embed UnimplementedTransferServiceServer
 // for forward compatibility
 type TransferServiceServer interface {
+	AddItem(context.Context, *AddItemRequest) (*AddItemVendorCodeReply, error)
+	RemoveItem(context.Context, *RemoveItemOneOf) (*emptypb.Empty, error)
+	UpdateItem(context.Context, *UpdateItemRequest) (*emptypb.Empty, error)
+	RegisterAccount(context.Context, *RegisterRequest) (*emptypb.Empty, error)
+	UpgradeAccount(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	UpdateAccount(context.Context, *UpdateAccountRequest) (*emptypb.Empty, error)
+	GetAccountInfo(context.Context, *GetAccountInfoRequest) (*GetAccountInfoReply, error)
+	GetSellerItemsList(context.Context, *GetSellerItemsListRequest) (*GetSellerItemsListReply, error)
+	Buy(context.Context, *BuyRequest) (*emptypb.Empty, error)
 	Deposit(context.Context, *BalanceOperationRequest) (*emptypb.Empty, error)
 	Withdraw(context.Context, *BalanceOperationRequest) (*emptypb.Empty, error)
 	GetBalance(context.Context, *BalanceRequest) (*BalanceReply, error)
@@ -88,6 +187,33 @@ type TransferServiceServer interface {
 type UnimplementedTransferServiceServer struct {
 }
 
+func (UnimplementedTransferServiceServer) AddItem(context.Context, *AddItemRequest) (*AddItemVendorCodeReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddItem not implemented")
+}
+func (UnimplementedTransferServiceServer) RemoveItem(context.Context, *RemoveItemOneOf) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveItem not implemented")
+}
+func (UnimplementedTransferServiceServer) UpdateItem(context.Context, *UpdateItemRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateItem not implemented")
+}
+func (UnimplementedTransferServiceServer) RegisterAccount(context.Context, *RegisterRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterAccount not implemented")
+}
+func (UnimplementedTransferServiceServer) UpgradeAccount(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpgradeAccount not implemented")
+}
+func (UnimplementedTransferServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAccount not implemented")
+}
+func (UnimplementedTransferServiceServer) GetAccountInfo(context.Context, *GetAccountInfoRequest) (*GetAccountInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccountInfo not implemented")
+}
+func (UnimplementedTransferServiceServer) GetSellerItemsList(context.Context, *GetSellerItemsListRequest) (*GetSellerItemsListReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSellerItemsList not implemented")
+}
+func (UnimplementedTransferServiceServer) Buy(context.Context, *BuyRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Buy not implemented")
+}
 func (UnimplementedTransferServiceServer) Deposit(context.Context, *BalanceOperationRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Deposit not implemented")
 }
@@ -111,6 +237,168 @@ type UnsafeTransferServiceServer interface {
 
 func RegisterTransferServiceServer(s grpc.ServiceRegistrar, srv TransferServiceServer) {
 	s.RegisterService(&TransferService_ServiceDesc, srv)
+}
+
+func _TransferService_AddItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).AddItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/AddItem",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).AddItem(ctx, req.(*AddItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_RemoveItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveItemOneOf)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).RemoveItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/RemoveItem",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).RemoveItem(ctx, req.(*RemoveItemOneOf))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_UpdateItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).UpdateItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/UpdateItem",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).UpdateItem(ctx, req.(*UpdateItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_RegisterAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).RegisterAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/RegisterAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).RegisterAccount(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_UpgradeAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).UpgradeAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/UpgradeAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).UpgradeAccount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).UpdateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/UpdateAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).UpdateAccount(ctx, req.(*UpdateAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_GetAccountInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAccountInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).GetAccountInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/GetAccountInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).GetAccountInfo(ctx, req.(*GetAccountInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_GetSellerItemsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSellerItemsListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).GetSellerItemsList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/GetSellerItemsList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).GetSellerItemsList(ctx, req.(*GetSellerItemsListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TransferService_Buy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BuyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TransferServiceServer).Buy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer_proto.TransferService/Buy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TransferServiceServer).Buy(ctx, req.(*BuyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _TransferService_Deposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -192,6 +480,42 @@ var TransferService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "transfer_proto.TransferService",
 	HandlerType: (*TransferServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddItem",
+			Handler:    _TransferService_AddItem_Handler,
+		},
+		{
+			MethodName: "RemoveItem",
+			Handler:    _TransferService_RemoveItem_Handler,
+		},
+		{
+			MethodName: "UpdateItem",
+			Handler:    _TransferService_UpdateItem_Handler,
+		},
+		{
+			MethodName: "RegisterAccount",
+			Handler:    _TransferService_RegisterAccount_Handler,
+		},
+		{
+			MethodName: "UpgradeAccount",
+			Handler:    _TransferService_UpgradeAccount_Handler,
+		},
+		{
+			MethodName: "UpdateAccount",
+			Handler:    _TransferService_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "GetAccountInfo",
+			Handler:    _TransferService_GetAccountInfo_Handler,
+		},
+		{
+			MethodName: "GetSellerItemsList",
+			Handler:    _TransferService_GetSellerItemsList_Handler,
+		},
+		{
+			MethodName: "Buy",
+			Handler:    _TransferService_Buy_Handler,
+		},
 		{
 			MethodName: "Deposit",
 			Handler:    _TransferService_Deposit_Handler,

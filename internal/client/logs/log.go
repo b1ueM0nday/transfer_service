@@ -3,7 +3,7 @@ package logs
 import (
 	"context"
 	"encoding/json"
-	bo "github.com/b1uem0nday/transfer_service/internal/client/balance_operations"
+	bo "github.com/b1uem0nday/transfer_service/contract"
 	"github.com/b1uem0nday/transfer_service/internal/repository"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

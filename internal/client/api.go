@@ -6,10 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 )
 
-func (c *Client) Deposit(amount *big.Int) error {
+func (c *Client) Deposit(amount uint64) error {
 	txOpts, err := c.NewTxOpts()
 	if err != nil {
 		return err
@@ -22,7 +21,7 @@ func (c *Client) Deposit(amount *big.Int) error {
 	return err
 }
 
-func (c *Client) Withdraw(amount *big.Int) error {
+func (c *Client) Withdraw(amount uint64) error {
 	txOpts, err := c.NewTxOpts()
 	if err != nil {
 		return err
@@ -34,7 +33,7 @@ func (c *Client) Withdraw(amount *big.Int) error {
 	c.log.HandleTransaction(tx)
 	return err
 }
-func (c *Client) Transfer(receiver string, amount *big.Int) error {
+func (c *Client) Transfer(receiver string, amount uint64) error {
 	txOpts, err := c.NewTxOpts()
 	if err != nil {
 		return err
@@ -46,44 +45,45 @@ func (c *Client) Transfer(receiver string, amount *big.Int) error {
 	c.log.HandleTransaction(tx)
 	return err
 }
-func (c *Client) GetBalance(accountAddress *string) (*big.Int, error) {
+func (c *Client) GetBalance(accountAddress *string) (uint64, error) {
+
 	if accountAddress != nil {
-		return c.contract.Balances(nil, common.HexToAddress(*accountAddress))
+
+		account, err := c.contract.Accounts(nil, common.HexToAddress(*accountAddress))
+		if err != nil {
+			return 0, err
+		}
+		return account.Balance, nil
 	} else {
-		return c.contract.Balances(nil, c.owner.address)
+
+		account, err := c.contract.Accounts(nil, c.owner.address)
+		if err != nil {
+			return 0, err
+		}
+		return account.Balance, nil
 	}
 }
 
-func (c *Client) deposit(amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
-	if amount == nil {
+func (c *Client) deposit(amount uint64, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
+	if amount == 0 {
 		return nil, fmt.Errorf("amount can't be nil")
 	}
-	if amount.Sign() < 0 {
-		return nil, fmt.Errorf("amount can't be negative")
-	}
-
 	return c.contract.Deposit(txOpts, amount)
 }
 
-func (c *Client) withdraw(amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
-	if amount == nil {
+func (c *Client) withdraw(amount uint64, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
+	if amount == 0 {
 		return nil, fmt.Errorf("amount can't be nil")
-	}
-	if amount.Sign() < 0 {
-		return nil, fmt.Errorf("amount can't be negative")
 	}
 	return c.contract.Withdraw(txOpts, amount)
 }
-func (c *Client) transfer(receiver string, amount *big.Int, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
+func (c *Client) transfer(receiver string, amount uint64, txOpts *bind.TransactOpts) (tx *types.Transaction, err error) {
 	if receiver == "" {
 		return nil, errors.New("no receiver")
 	}
 	receiverAddress := common.HexToAddress(receiver)
-	if amount == nil {
+	if amount == 0 {
 		return nil, fmt.Errorf("amount can't be nil")
-	}
-	if amount.Sign() < 0 {
-		return nil, fmt.Errorf("amount can't be negative")
 	}
 	return c.contract.Transfer(txOpts, receiverAddress, amount)
 }

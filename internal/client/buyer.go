@@ -2,7 +2,6 @@ package client
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 	"time"
 )
 
@@ -21,26 +20,26 @@ type (
 		Name     string
 		Phone    string
 		Email    string
-		Birthday time.Time
-		RegTime  time.Time
+		Birthday uint64
+		RegTime  uint64
 	}
 	MarketItem struct {
 		VendorCode  string
 		Name        string
 		Description string
-		Price       *big.Int
+		Price       uint64
 		Count       uint64
 	}
 )
 
 func (c *Client) RegisterAccount(usr *UserData) error {
-	usr.RegTime = time.Now()
+	usr.RegTime = uint64(time.Now().UnixNano())
 	opts, err := c.NewTxOpts()
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.RegisterAccount(opts, usr.Name, usr.Phone, usr.Email,
-		uint64(usr.Birthday.UnixNano()), uint64(usr.RegTime.UnixNano()))
+	tx, err := c.contract.RegisterAccount(opts, usr.Name, usr.Phone, usr.Email,
+		usr.Birthday, usr.RegTime)
 	if err != nil {
 		return err
 	}
@@ -53,7 +52,7 @@ func (c *Client) UpgradeAccount() error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.UpgradeAccount(opts)
+	tx, err := c.contract.UpgradeAccount(opts)
 	if err != nil {
 		return err
 	}
@@ -65,7 +64,7 @@ func (c *Client) ChangeName(name string) error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.ChangeName(opts, name)
+	tx, err := c.contract.ChangeName(opts, name)
 	if err != nil {
 		return err
 	}
@@ -77,7 +76,7 @@ func (c *Client) ChangePhone(phone string) error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.ChangePhone(opts, phone)
+	tx, err := c.contract.ChangePhone(opts, phone)
 	if err != nil {
 		return err
 	}
@@ -89,7 +88,7 @@ func (c *Client) ChangeEmail(email string) error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.ChangeEmail(opts, email)
+	tx, err := c.contract.ChangeEmail(opts, email)
 	if err != nil {
 		return err
 	}
@@ -98,7 +97,7 @@ func (c *Client) ChangeEmail(email string) error {
 }
 
 func (c *Client) GetAccountInfo(address string) (*UserData, error) {
-	data, err := c.contract1.GetAccountInfo(nil, common.HexToAddress(address))
+	data, err := c.contract.GetAccountInfo(nil, common.HexToAddress(address))
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +105,13 @@ func (c *Client) GetAccountInfo(address string) (*UserData, error) {
 		Name:     data.Name,
 		Phone:    data.Phone,
 		Email:    data.Email,
-		Birthday: time.Unix(0, int64(data.Birthday)),
-		RegTime:  time.Unix(0, int64(data.RegTime)),
+		Birthday: data.Birthday,
+		RegTime:  data.RegTime,
 	}, nil
 }
 
 func (c *Client) GetAccountItemsList() ([]MarketItem, error) {
-	data, err := c.contract1.GetAccountItemsList(nil)
+	data, err := c.contract.GetAccountItemsList(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +122,7 @@ func (c *Client) GetAccountItemsList() ([]MarketItem, error) {
 			Name:        data[i].Name,
 			Description: data[i].Description,
 			Price:       data[i].Price,
-			Count:       data[i].Count.Uint64(),
+			Count:       data[i].Count,
 		}
 	}
 	return items, nil
@@ -134,7 +133,7 @@ func (c *Client) BuyItem(seller, code string, count uint64) error {
 	if err != nil {
 		return err
 	}
-	tx, err := c.contract1.BuyItem(opts, common.HexToAddress(seller), code, big.NewInt(int64(count)))
+	tx, err := c.contract.BuyItem(opts, common.HexToAddress(seller), code, count)
 	if err != nil {
 		return err
 	}
